@@ -737,6 +737,16 @@ html[data-lang="en"] .lobby-bg::after { content: "GUANDAN"; letter-spacing: 0.08
   animation: word-bang .9s ease forwards;
 }
 .fx-word.king { font-size: 80px; color: #fff6c0; -webkit-text-stroke: 2px #7a4a00; }
+.fx-word.special { font-size: 96px; letter-spacing: 0.14em; text-shadow: 0 0 28px rgba(255,210,80,.95), 0 0 48px rgba(20,0,0,.7); }
+body.shake-hard { animation: screen-shake-hard .65s linear; }
+@keyframes screen-shake-hard {
+  0%,100% { transform: translate(0,0); }
+  12% { transform: translate(-10px, 5px); }
+  28% { transform: translate(10px, -6px); }
+  44% { transform: translate(-8px, -4px); }
+  60% { transform: translate(8px, 5px); }
+  76% { transform: translate(-5px, 3px); }
+}
 @keyframes word-bang {
   0% { transform: translate(-50%,-50%) scale(.2); opacity: 0; }
   30% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; }
@@ -771,7 +781,9 @@ body.shake-screen { animation: screen-shake .45s linear; }
   position: fixed; inset: 0; z-index: 45;
   background: rgba(0,0,0,.55);
   display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
 }
+#settle .panel { pointer-events: auto; }
 #settle .panel {
   width: min(400px, 92vw);
   background: linear-gradient(180deg, #1b4332, #0d261c);

@@ -37,6 +37,9 @@ assert(cls(["S-8-0","H-8-0","C-8-0","D-8-0"]).name === "四个炸", "4 bomb");
 assert(cls(["S-8-0","H-8-0","C-8-0","D-8-0","S-8-1"]).name === "五个炸", "5 bomb");
 assert(cls(["J-s-0","J-s-1","J-b-0"]).name === "三王炸", "3 joker");
 assert(cls(["J-s-0","J-s-1","J-b-0","J-b-1"]).name === "天王炸", "4 joker");
+assert(C.isOrdinaryType(cls(["S-3-0"])), "single ordinary");
+assert(C.isSpecialType(cls(["S-8-0","H-8-0","C-8-0","D-8-0"])), "bomb special");
+assert(C.isSpecialType(cls(["S-3-0","H-3-0","C-3-0","S-4-0","H-4-0","C-4-0"])), "plate special");
 
 // beat
 const a = cls(["S-8-0","H-8-0","C-8-0","D-8-0"]);

@@ -1009,9 +1009,14 @@ io.on("connection", (socket) => {
         const other = room.seats.find((x) => x.socketId && x.socketId !== socket.id);
         if (other) room.hostId = other.socketId;
       }
+      if (room.pendingSwap && (room.pendingSwap.from === seat || room.pendingSwap.to === seat)) {
+        const ps = room.pendingSwap;
+        room.pendingSwap = null;
+        emitTo(room, "swap-result", { accept: false, from: ps.from, to: ps.to });
+      }
     }
-    emitRoom(room);
     if (room.phase === "playing" && seat >= 0 && room.currentSeat === seat) startTurnClock(room);
+    emitRoom(room);
     setTimeout(() => cleanupRoom(code), 15000);
   });
 });

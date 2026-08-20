@@ -87,6 +87,14 @@
     return c && (c.type === "bomb" || c.type === "joker3" || c.type === "joker4");
   }
 
+  var ORDINARY_TYPES = { single: 1, pair: 1, straight: 1, fullhouse: 1, plane: 1 };
+  function isOrdinaryType(c) {
+    return !!(c && ORDINARY_TYPES[c.type]);
+  }
+  function isSpecialType(c) {
+    return !!(c && !isOrdinaryType(c));
+  }
+
   function tryJokerBomb(n, jokers) {
     if (jokers.total !== n) return null;
     if (n === 4) return mk("joker4", 4, 9000, "天王炸");
@@ -689,6 +697,8 @@
     classify: classify,
     canBeat: canBeat,
     isBombType: isBombType,
+    isOrdinaryType: isOrdinaryType,
+    isSpecialType: isSpecialType,
     sortCards: sortCards,
     generateBeating: generateBeating,
     weakestBeating: weakestBeating,

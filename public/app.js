@@ -8,7 +8,9 @@
   var dealPending = false;
   var sfxOn = true;
   var bgmOn = false;
+  var takeoverOn = false;
   try { bgmOn = localStorage.getItem("nl-bgm") === "1"; } catch (e0) {}
+  try { takeoverOn = localStorage.getItem("nl-takeover") === "1"; } catch (e1) {}
   var audioCtx = null;
   var localStream = null;
   var pcs = {};
@@ -410,15 +412,26 @@
     });
     Sfx.slap();
     if (fx.bomb) bombFX(fx.bomb);
+    else if (fx.special || isSpecialCombo(fx.combo)) specialFX(fx.combo);
     setTimeout(function () {
       renderLastPlay({ seat: fx.seat, cards: cards, combo: fx.combo });
     }, 430);
   }
 
+  function isOrdinaryCombo(c) {
+    if (!c) return true;
+    if (window.GDCombo && GDCombo.isOrdinaryType) return GDCombo.isOrdinaryType(c);
+    var t = c.type;
+    return t === "single" || t === "pair" || t === "straight" || t === "fullhouse" || t === "plane";
+  }
+  function isSpecialCombo(c) {
+    return !!(c && !isOrdinaryCombo(c));
+  }
+
   function bombFX(kind) {
     var layer = $("fx-layer");
-    document.body.classList.add("shake-screen");
-    setTimeout(function () { document.body.classList.remove("shake-screen"); }, 450);
+    document.body.classList.add("shake-screen", "shake-hard");
+    setTimeout(function () { document.body.classList.remove("shake-screen", "shake-hard"); }, 650);
     if (kind === "joker4") {
       var fl = document.createElement("div");
       fl.className = "flash";
@@ -432,12 +445,28 @@
     w1.className = "shockwave" + (kind === "joker4" || kind === "joker3" ? " red" : "");
     layer.appendChild(w1);
     var word = document.createElement("div");
-    word.className = "fx-word" + (kind === "joker4" ? " king" : "");
+    word.className = "fx-word special" + (kind === "joker4" ? " king" : "");
     word.textContent = kind === "joker4" ? T("fx.joker4") : kind === "joker3" ? T("fx.joker3") : T("fx.bomb");
     layer.appendChild(word);
     Sfx.bomb();
     Sfx.sting(kind);
     setTimeout(function () { w1.remove(); word.remove(); ink.remove(); }, 1100);
+  }
+
+  function specialFX(combo) {
+    var layer = $("fx-layer");
+    if (!layer) return;
+    document.body.classList.add("shake-hard");
+    setTimeout(function () { document.body.classList.remove("shake-hard"); }, 650);
+    var ink = document.createElement("div");
+    ink.className = "fx-ink gold";
+    layer.appendChild(ink);
+    var word = document.createElement("div");
+    word.className = "fx-word special";
+    word.textContent = comboLabel(combo) || T("fx.special");
+    layer.appendChild(word);
+    Sfx.sting("special");
+    setTimeout(function () { ink.remove(); word.remove(); }, 1100);
   }
 
   function finishFX(fx) {
@@ -832,14 +861,14 @@
   $("btn-create").onclick = function () {
     ensureAudio();
     enterFullscreen();
-    socket.emit("join", { name: nick() });
+    socket.emit("join", { name: nick(), autoTakeover: takeoverOn });
   };
   $("btn-join").onclick = function () {
     ensureAudio();
     var code = $("room-code").value.trim().toUpperCase();
     if (!code) { toast(T("toast.need_code")); return; }
     enterFullscreen();
-    socket.emit("join", { name: nick(), room: code });
+    socket.emit("join", { name: nick(), room: code, autoTakeover: takeoverOn });
   };
   $("btn-copy").onclick = function () {
     if (!state) return;
@@ -938,6 +967,8 @@
       if (!ensureInRoom()) return;
       var me = meSeat();
       var on = !(me && me.autoTakeover);
+      takeoverOn = on;
+      try { localStorage.setItem("nl-takeover", on ? "1" : "0"); } catch (e) {}
       socket.emit("setAutoTakeover", { on: on });
       toast(on ? T("toast.autotake_on") : T("toast.autotake_off"));
     };
@@ -982,7 +1013,7 @@
   function rejoinIfNeeded() {
     var code = (state && state.code) || qsRoom() || ($("room-code").value || "").trim().toUpperCase();
     if (code && table && !table.classList.contains("hidden")) {
-      socket.emit("join", { name: nick(), room: code });
+      socket.emit("join", { name: nick(), room: code, autoTakeover: takeoverOn });
     }
   }
   socket.on("connect", function () { rejoinIfNeeded(); });
@@ -991,6 +1022,7 @@
   /* ===== socket ===== */
   socket.on("joined", function (d) {
     history.replaceState(null, "", "?room=" + d.code);
+    if (takeoverOn) socket.emit("setAutoTakeover", { on: true });
   });
 
   socket.on("room-state", function (st) {
