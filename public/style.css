@@ -735,7 +735,8 @@ body.no-webgl #table {
   width: 40px; height: 40px; margin: -20px;
   border-radius: 50%;
   border: 4px solid #f5d76e;
-  animation: wave 0.7s ease-out forwards;
+  animation: wave 1.2s ease-out forwards;
+  z-index: 4;
 }
 .shockwave.red { border-color: #ff4d3a; box-shadow: 0 0 30px #ff4d3a; }
 @keyframes wave {
@@ -749,10 +750,11 @@ body.no-webgl #table {
   color: #ffe08a;
   -webkit-text-stroke: 2px #8a2000;
   text-shadow: 0 0 24px rgba(255,80,40,.8);
-  animation: word-bang .7s ease forwards;
+  animation: word-bang 1.2s ease forwards;
   max-width: 70vw;
   text-align: center;
   pointer-events: none;
+  z-index: 5;
 }
 .fx-word.king { font-size: 80px; color: #fff6c0; -webkit-text-stroke: 2px #7a4a00; }
 .fx-word.special { font-size: 96px; letter-spacing: 0.14em; text-shadow: 0 0 28px rgba(255,210,80,.95), 0 0 48px rgba(20,0,0,.7); }
@@ -767,13 +769,15 @@ body.shake-hard { animation: screen-shake-hard .65s linear; }
 }
 @keyframes word-bang {
   0% { transform: translate(-50%,-50%) scale(.2); opacity: 0; }
-  28% { transform: translate(-50%,-50%) scale(1.12); opacity: 1; }
+  16% { transform: translate(-50%,-50%) scale(1.12); opacity: 1; }
+  72% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
   100% { transform: translate(-50%,-50%) scale(1); opacity: 0; }
 }
 .flash {
   position: absolute; inset: 0;
   background: #fff;
   animation: flash .35s ease forwards;
+  z-index: 6;
 }
 @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
 body.shake-screen { animation: screen-shake .45s linear; }
@@ -841,6 +845,11 @@ body.shake-screen { animation: screen-shake .45s linear; }
     max-width: 40vw;
     top: 30%;
     letter-spacing: .08em;
+  }
+  .fx-clip-wrap {
+    width: min(38vw, 220px);
+    height: min(38vw, 220px);
+    top: 30%;
   }
   .actions { gap: 8px; }
   .actions .btn { min-width: 88px; min-height: 44px; font-size: 15px; }
@@ -988,6 +997,11 @@ body.portrait .fx-word, body.portrait .fx-word.king, body.portrait .fx-word.spec
   top: 28%;
   letter-spacing: .08em;
 }
+body.portrait .fx-clip-wrap {
+  width: min(42vw, 200px);
+  height: min(42vw, 200px);
+  top: 28%;
+}
 body.portrait .turn-banner {
   top: auto;
   transform: none;
@@ -1071,7 +1085,8 @@ body.portrait .icon-btn { width: 32px; height: 32px; font-size: 14px; }
   background:
     radial-gradient(ellipse at 50% 42%, rgba(232,194,71,.22), transparent 55%),
     radial-gradient(ellipse at 50% 50%, transparent 42%, rgba(8,4,0,.22) 100%);
-  animation: ink-burst .7s ease forwards;
+  animation: ink-burst 1.2s ease forwards;
+  z-index: 3;
 }
 .fx-ink.gold { mix-blend-mode: plus-lighter; }
 .fx-ink.triple {
@@ -1086,8 +1101,54 @@ body.portrait .icon-btn { width: 32px; height: 32px; font-size: 14px; }
 }
 @keyframes ink-burst {
   0% { opacity: 0; transform: scale(.86); }
-  25% { opacity: 1; transform: scale(1.02); }
+  16% { opacity: 1; transform: scale(1.02); }
+  72% { opacity: .85; transform: scale(1.04); }
   100% { opacity: 0; transform: scale(1.08); }
+}
+
+/* ===== Niulai FX film burst ===== */
+.fx-clip-wrap {
+  position: absolute;
+  left: 50%;
+  top: 36%;
+  width: min(46vmin, 380px);
+  height: min(46vmin, 380px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 46%;
+  box-shadow: 0 0 48px 10px rgba(0, 0, 0, .4);
+}
+.fx-clip {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;
+  mix-blend-mode: screen;
+  filter: contrast(1.08) saturate(1.12) brightness(1.05);
+  animation: fx-clip-pulse 1.2s ease-out forwards;
+}
+.fx-clip-wrap.kind-king .fx-clip {
+  filter: contrast(1.06) saturate(1.28) sepia(.2) brightness(1.1);
+}
+.fx-clip-wrap.kind-bomb .fx-clip {
+  filter: contrast(1.16) saturate(1.2) brightness(1.04);
+}
+.fx-clip-veil {
+  position: absolute;
+  inset: -10%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 44%, transparent 30%, rgba(4, 0, 0, .42) 66%, rgba(0, 0, 0, .86) 100%);
+}
+@keyframes fx-clip-pulse {
+  0% { transform: scale(1.22); opacity: 0; }
+  10% { opacity: 1; }
+  36% { transform: scale(1.02); }
+  70% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1.16); opacity: 0; }
 }
 
 #btn-bgm.on { box-shadow: 0 0 0 3px rgba(212,175,55,.45); opacity: 1; }

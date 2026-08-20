@@ -485,6 +485,65 @@
     return !!(c && !isOrdinaryCombo(c));
   }
 
+  var FX_CLIP = {
+    special: "/fx/niulai-special.webm?v=nl44",
+    bomb: "/fx/niulai-bomb.webm?v=nl44",
+    king: "/fx/niulai-king.webm?v=nl44"
+  };
+  var fxClipCache = {};
+
+  function preloadFxClips() {
+    Object.keys(FX_CLIP).forEach(function (k) {
+      var v = document.createElement("video");
+      v.muted = true;
+      v.defaultMuted = true;
+      v.preload = "auto";
+      v.playsInline = true;
+      v.setAttribute("muted", "");
+      v.setAttribute("playsinline", "");
+      v.setAttribute("webkit-playsinline", "");
+      v.src = FX_CLIP[k];
+      try { v.load(); } catch (e) {}
+      fxClipCache[k] = v;
+    });
+  }
+  preloadFxClips();
+
+  function spawnFxClip(kind) {
+    var layer = $("fx-layer");
+    var src = FX_CLIP[kind];
+    if (!layer || !src) return null;
+    var wrap = document.createElement("div");
+    wrap.className = "fx-clip-wrap kind-" + kind;
+    var vid = document.createElement("video");
+    vid.className = "fx-clip";
+    vid.muted = true;
+    vid.defaultMuted = true;
+    vid.autoplay = true;
+    vid.playsInline = true;
+    vid.setAttribute("muted", "");
+    vid.setAttribute("autoplay", "");
+    vid.setAttribute("playsinline", "");
+    vid.setAttribute("webkit-playsinline", "");
+    vid.preload = "auto";
+    vid.src = src;
+    vid.addEventListener("error", function () {
+      if (wrap.parentNode) wrap.remove();
+    });
+    wrap.appendChild(vid);
+    var veil = document.createElement("div");
+    veil.className = "fx-clip-veil";
+    wrap.appendChild(veil);
+    layer.appendChild(wrap);
+    var playP = vid.play();
+    if (playP && playP.catch) {
+      playP.catch(function () {
+        if (wrap.parentNode) wrap.remove();
+      });
+    }
+    return wrap;
+  }
+
   function bombFX(kind) {
     var layer = $("fx-layer");
     document.body.classList.add("shake-screen", "shake-hard");
@@ -495,6 +554,8 @@
       layer.appendChild(fl);
       setTimeout(function () { fl.remove(); }, 400);
     }
+    var clipKind = kind === "joker4" ? "king" : "bomb";
+    var clip = spawnFxClip(clipKind);
     var ink = document.createElement("div");
     ink.className = "fx-ink " + (kind === "joker4" ? "king" : kind === "joker3" ? "triple" : "gold");
     layer.appendChild(ink);
@@ -507,7 +568,12 @@
     layer.appendChild(word);
     Sfx.bomb();
     Sfx.sting(kind);
-    setTimeout(function () { w1.remove(); word.remove(); ink.remove(); }, 750);
+    setTimeout(function () {
+      w1.remove();
+      word.remove();
+      ink.remove();
+      if (clip && clip.parentNode) clip.remove();
+    }, 1200);
   }
 
   function specialFX(combo) {
@@ -515,6 +581,7 @@
     if (!layer) return;
     document.body.classList.add("shake-hard");
     setTimeout(function () { document.body.classList.remove("shake-hard"); }, 650);
+    var clip = spawnFxClip("special");
     var ink = document.createElement("div");
     ink.className = "fx-ink gold";
     layer.appendChild(ink);
@@ -523,7 +590,11 @@
     word.textContent = comboLabel(combo) || T("fx.special");
     layer.appendChild(word);
     Sfx.sting("special");
-    setTimeout(function () { ink.remove(); word.remove(); }, 750);
+    setTimeout(function () {
+      ink.remove();
+      word.remove();
+      if (clip && clip.parentNode) clip.remove();
+    }, 1200);
   }
 
   function finishFX(fx) {
