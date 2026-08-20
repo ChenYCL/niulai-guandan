@@ -596,12 +596,29 @@
     });
   }
 
+  function handCardId(node) {
+    if (!node) return null;
+    var wrap = node.closest ? node.closest(".hand-card") : null;
+    if (!wrap) return null;
+    return wrap.getAttribute("data-id") || (wrap.querySelector(".card") && wrap.querySelector(".card").getAttribute("data-id"));
+  }
+
+  function applyHandSelection() {
+    if (!handEl) return;
+    handEl.querySelectorAll(".hand-card").forEach(function (n) {
+      var cid = handCardId(n);
+      n.classList.toggle("selected", !!selected[cid]);
+      n.classList.remove("hinted");
+      n.style.zIndex = selected[cid] ? "20" : "";
+    });
+  }
+
   function makeHandCard(id, z) {
     var wrap = document.createElement("div");
     wrap.className = "hand-card" + (selected[id] ? " selected" : "");
+    wrap.setAttribute("data-id", id);
     wrap.style.zIndex = selected[id] ? "20" : String((z || 0) + 1);
     wrap.innerHTML = cardHTML(id);
-    wrap.onclick = function () { toggleSelect(id); };
     return wrap;
   }
   function fanRow(row) {
@@ -663,14 +680,128 @@
     }
     if (selected[id]) delete selected[id];
     else selected[id] = true;
-    var nodes = handEl.querySelectorAll(".hand-card");
-    nodes.forEach(function (n) {
-      var cid = n.querySelector(".card") && n.querySelector(".card").getAttribute("data-id");
-      n.classList.toggle("selected", !!selected[cid]);
-      n.classList.remove("hinted");
-      n.style.zIndex = selected[cid] ? "20" : "";
-    });
+    applyHandSelection();
   }
+
+  function paintSelect(id, on) {
+    if (animLock) return;
+    if (state && state.phase === "tribute" && state.tribute && state.tribute.to === state.selfSeat) {
+      toggleSelect(id);
+      return;
+    }
+    if (on) selected[id] = true;
+    else delete selected[id];
+    applyHandSelection();
+  }
+
+  var swipe = {
+    active: false,
+    dragging: false,
+    pointerId: null,
+    lastId: null,
+    paintOn: true,
+    startX: 0,
+    startY: 0,
+    seen: Object.create(null)
+  };
+
+  function cardAtPoint(x, y) {
+    if (!handEl) return null;
+    var rows = handEl.querySelectorAll(".hand-row");
+    var row = null;
+    var best = 1e9;
+    var i, rr, cards, cr, left, right, next, top, bot, d;
+    for (i = 0; i < rows.length; i++) {
+      rr = rows[i].getBoundingClientRect();
+      top = rr.top - 48;
+      bot = rr.bottom + 12;
+      if (y < top || y > bot) continue;
+      d = Math.abs(y - (rr.top + rr.bottom) / 2);
+      if (d < best) { best = d; row = rows[i]; }
+    }
+    if (!row) return handCardId(document.elementFromPoint(x, y));
+    cards = row.querySelectorAll(".hand-card");
+    var hit = null;
+    for (i = 0; i < cards.length; i++) {
+      cr = cards[i].getBoundingClientRect();
+      left = cr.left;
+      if (i + 1 < cards.length) {
+        next = cards[i + 1].getBoundingClientRect().left;
+        right = next > left + 6 ? next : left + 10;
+      } else {
+        right = cr.right;
+      }
+      if (x >= left && x < right) hit = cards[i];
+    }
+    return hit ? handCardId(hit) : null;
+  }
+
+  function endSwipe(e) {
+    if (!swipe.active) return;
+    if (e && swipe.pointerId != null && e.pointerId !== swipe.pointerId) return;
+    swipe.active = false;
+    swipe.dragging = false;
+    swipe.pointerId = null;
+    swipe.lastId = null;
+    swipe.seen = Object.create(null);
+  }
+
+  function swipePaintAt(id) {
+    if (!id || id === swipe.lastId) return;
+    if (swipe.seen[id]) toggleSelect(id);
+    else {
+      paintSelect(id, swipe.paintOn);
+      swipe.seen[id] = 1;
+    }
+    swipe.lastId = id;
+  }
+
+  function onHandPointerDown(e) {
+    if (animLock) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    var id = handCardId(e.target);
+    if (!id) return;
+    e.preventDefault();
+    swipe.active = true;
+    swipe.dragging = false;
+    swipe.pointerId = e.pointerId;
+    swipe.lastId = id;
+    swipe.startX = e.clientX;
+    swipe.startY = e.clientY;
+    swipe.seen = Object.create(null);
+    swipe.seen[id] = 1;
+    toggleSelect(id);
+    swipe.paintOn = !!selected[id];
+    var wrap = $("hand-wrap") || handEl;
+    if (wrap && wrap.setPointerCapture) {
+      try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+  }
+
+  function onHandPointerMove(e) {
+    if (!swipe.active || e.pointerId !== swipe.pointerId) return;
+    e.preventDefault();
+    if (!swipe.dragging) {
+      var dx = e.clientX - swipe.startX;
+      var dy = e.clientY - swipe.startY;
+      if (dx * dx + dy * dy < 64) return;
+      swipe.dragging = true;
+    }
+    swipePaintAt(cardAtPoint(e.clientX, e.clientY));
+  }
+
+  function bindHandSwipe() {
+    var wrap = $("hand-wrap") || handEl;
+    if (!wrap || wrap._nlSwipe) return;
+    wrap._nlSwipe = true;
+    wrap.addEventListener("pointerdown", onHandPointerDown, { passive: false });
+    wrap.addEventListener("pointermove", onHandPointerMove, { passive: false });
+    wrap.addEventListener("pointerup", endSwipe);
+    wrap.addEventListener("pointercancel", endSwipe);
+    window.addEventListener("pointerup", endSwipe);
+    window.addEventListener("pointercancel", endSwipe);
+  }
+  bindHandSwipe();
 
   function selectedIds() {
     return Object.keys(selected);
