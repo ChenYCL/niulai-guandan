@@ -542,16 +542,19 @@
         (s.auto ? " · " + T("seat.auto") : "") +
         "</div></div>";
     } else {
+      var countBadge = state.phase !== "lobby"
+        ? '<span class="cnt">' + s.cardCount + "</span>"
+        : "";
       el.innerHTML =
         '<div class="seat-card">' +
           '<div class="seat-face">' +
-            '<div class="avatar' + (s.isBot ? " bot" : "") + (s.speaking ? " speaking" : "") + '">' + init + "</div>" +
+            '<div class="avatar' + (s.isBot ? " bot" : "") + (s.speaking ? " speaking" : "") + '">' + init + countBadge + "</div>" +
             stacks +
           "</div>" +
           '<div class="seat-meta"><div class="nm">' + escapeHtml(s.name) +
             (partner ? '<span class="partner-tag">' + T("seat.partner") + "</span>" : "") + "</div>" +
             '<div class="sub">' + (s.isBot ? T("seat.bot") : (s.auto ? T("seat.auto") : (s.online ? T("seat.online") : T("seat.offline")))) +
-            (state.phase !== "lobby" ? " · " + T("seat.cards", { n: s.cardCount }) : (s.ready ? " · " + T("seat.ready") : "")) +
+            (state.phase !== "lobby" ? "" : (s.ready ? " · " + T("seat.ready") : "")) +
             (s.finishedRank ? " · " + placeLabel(s.finishedRank) : "") +
             (canClaimNow() ? " · " + (s.isBot ? T("seat.claim") : T("seat.swap")) : "") +
             "</div></div>" +
@@ -898,6 +901,7 @@
     state = st;
     lobby.classList.add("hidden");
     table.classList.remove("hidden");
+    if (window.NiulaiRoom3D && NiulaiRoom3D.sync) NiulaiRoom3D.sync();
     renderHUD();
     ["south", "east", "north", "west"].forEach(function (rel) {
       var idx = relSeatIndex(rel);
