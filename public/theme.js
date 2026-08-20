@@ -12,17 +12,17 @@
 
   /* 按正片：黄身粉鼻直立小牛 / 云雀 / 豹拉 / 狼 / 小绳头=草蛇 */
   var MOTIF = {
-    H: { name: "", svg: pic("/art/niulai.png?v=nl30") },
-    D: { name: "", svg: pic("/art/diamonds.png?v=nl30") },
-    C: { name: "", svg: pic("/art/clubs.png?v=nl30") },
-    S: { name: "", svg: pic("/art/dad.png?v=nl30") },
-    s: { name: "", svg: pic("/art/joker-s.png?v=nl30") },
-    b: { name: "", svg: pic("/art/joker-b.png?v=nl30") },
-    mom: { name: "", svg: pic("/art/mom.png?v=nl30") },
-    niu2: { name: "", svg: pic("/art/niu2.png?v=nl30") }
+    H: { name: "", svg: pic("/art/niulai.png?v=nl31") },
+    D: { name: "", svg: pic("/art/diamonds.png?v=nl31") },
+    C: { name: "", svg: pic("/art/clubs.png?v=nl31") },
+    S: { name: "", svg: pic("/art/dad.png?v=nl31") },
+    s: { name: "", svg: pic("/art/joker-s.png?v=nl31") },
+    b: { name: "", svg: pic("/art/joker-b.png?v=nl31") },
+    mom: { name: "", svg: pic("/art/mom.png?v=nl31") },
+    niu2: { name: "", svg: pic("/art/niu2.png?v=nl31") }
   };
 
-  ["/art/niulai.png?v=nl30","/art/diamonds.png?v=nl30","/art/clubs.png?v=nl30","/art/dad.png?v=nl30","/art/joker-s.png?v=nl30","/art/joker-b.png?v=nl30","/art/mom.png?v=nl30","/art/niu2.png?v=nl30"].forEach(function (src) {
+  ["/art/niulai.png?v=nl31","/art/diamonds.png?v=nl31","/art/clubs.png?v=nl31","/art/dad.png?v=nl31","/art/joker-s.png?v=nl31","/art/joker-b.png?v=nl31","/art/mom.png?v=nl31","/art/niu2.png?v=nl31"].forEach(function (src) {
     var im = new Image();
     im.src = src;
   });

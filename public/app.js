@@ -239,9 +239,10 @@
     var art = (window.NiulaiTheme && NiulaiTheme.cardArt(c)) || { name: "", svg: "" };
     var suitKey = c.joker ? ("joker-" + c.joker) : ("suit-" + c.suit);
     var cls = "card " + extraClass + (red ? " red" : "") + (c.joker ? " joker" : "") + " " + suitKey;
-    if (state) {
-      if (GDCombo.isWild(c, state.level)) cls += " wild-badge";
-      else if (c.rank === state.level) cls += " level-badge";
+    var mark = "";
+    if (state && !c.joker) {
+      if (GDCombo.isWild(c, state.level)) mark = '<span class="mark wild">配</span>';
+      else if (c.rank === state.level) mark = '<span class="mark level">级</span>';
     }
     var rk, st;
     if (c.joker) {
@@ -255,6 +256,7 @@
       '<div class="rk">' + rk + (st ? '<div class="st">' + st + "</div>" : "") + "</div>" +
       '<div class="pip">' + art.svg + "</div>" +
       '<div class="rk br">' + rk + (st ? '<div class="st">' + st + "</div>" : "") + "</div>" +
+      mark +
       "</div></div>";
   }
 
@@ -535,10 +537,10 @@
   }
 
   var COW_FACE = [
-    "/art/niulai.png?v=nl30",
-    "/art/diamonds.png?v=nl30",
-    "/art/clubs.png?v=nl30",
-    "/art/dad.png?v=nl30"
+    "/art/niulai.png?v=nl31",
+    "/art/diamonds.png?v=nl31",
+    "/art/clubs.png?v=nl31",
+    "/art/dad.png?v=nl31"
   ];
 
   function cowAvatar(seatIdx, extraClass, inner) {
