@@ -12,17 +12,17 @@
 
   /* 按正片：黄身粉鼻直立小牛 / 云雀 / 豹拉 / 狼 / 小绳头=草蛇 */
   var MOTIF = {
-    H: { name: "", svg: pic("/art/niulai.png?v=nl18") },
-    D: { name: "", svg: pic("/art/diamonds.png?v=nl18") },
-    C: { name: "", svg: pic("/art/clubs.png?v=nl18") },
-    S: { name: "", svg: pic("/art/dad.png?v=nl18") },
-    s: { name: "", svg: pic("/art/joker-s.png?v=nl18") },
-    b: { name: "", svg: pic("/art/joker-b.png?v=nl18") },
-    mom: { name: "", svg: pic("/art/mom.png?v=nl18") },
-    niu2: { name: "", svg: pic("/art/niu2.png?v=nl18") }
+    H: { name: "", svg: pic("/art/niulai.png?v=nl21") },
+    D: { name: "", svg: pic("/art/diamonds.png?v=nl21") },
+    C: { name: "", svg: pic("/art/clubs.png?v=nl21") },
+    S: { name: "", svg: pic("/art/dad.png?v=nl21") },
+    s: { name: "", svg: pic("/art/joker-s.png?v=nl21") },
+    b: { name: "", svg: pic("/art/joker-b.png?v=nl21") },
+    mom: { name: "", svg: pic("/art/mom.png?v=nl21") },
+    niu2: { name: "", svg: pic("/art/niu2.png?v=nl21") }
   };
 
-  ["/art/niulai.png?v=nl18","/art/diamonds.png?v=nl18","/art/clubs.png?v=nl18","/art/dad.png?v=nl18","/art/joker-s.png?v=nl18","/art/joker-b.png?v=nl18","/art/mom.png?v=nl18","/art/niu2.png?v=nl18"].forEach(function (src) {
+  ["/art/niulai.png?v=nl21","/art/diamonds.png?v=nl21","/art/clubs.png?v=nl21","/art/dad.png?v=nl21","/art/joker-s.png?v=nl21","/art/joker-b.png?v=nl21","/art/mom.png?v=nl21","/art/niu2.png?v=nl21"].forEach(function (src) {
     var im = new Image();
     im.src = src;
   });
@@ -109,9 +109,26 @@
     }
   }
 
+  function paintFeltGrain(canvas) {
+    if (!canvas || !canvas.getContext) return;
+    var w = 640, h = 360;
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, w, h);
+    var i, x, y, a;
+    for (i = 0; i < 2400; i++) {
+      x = Math.random() * w;
+      y = Math.random() * h;
+      a = Math.random() * 0.09;
+      ctx.fillStyle = Math.random() > 0.5 ? "rgba(255,255,255," + a + ")" : "rgba(0,20,10," + (a * 1.2) + ")";
+      ctx.fillRect(x, y, 1 + Math.random() * 1.4, 1);
+    }
+  }
+
   function bindLogos() {
     paintLogo(document.getElementById("felt-logo"), { sub: "" });
     paintLogo(document.getElementById("lobby-logo"), { sub: "" });
+    paintFeltGrain(document.getElementById("felt-grain"));
   }
 
   root.NiulaiTheme = {

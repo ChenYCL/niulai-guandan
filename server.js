@@ -9,7 +9,9 @@ const { randomUUID } = require("crypto");
 const Combo = require("./public/combo.js");
 
 const PORT = process.env.PORT || 8787;
-const TURN_MS = 90000;
+const TURN_SOFT_MS = 15000;
+const TURN_FORCE_MS = 30000;
+const TURN_MS = TURN_FORCE_MS;
 const DEAL_MS = 5200;
 const BOT_MIN = 400;
 const BOT_MAX = 750;
@@ -55,6 +57,7 @@ function emptySeat() {
     muted: true,
     speaking: false,
     auto: false,
+    autoTakeover: false,
     hand: [],
     finishedRank: 0,
     socketId: null
@@ -76,6 +79,8 @@ function newRoom(code, hostId) {
     seats: [emptySeat(), emptySeat(), emptySeat(), emptySeat()],
     currentSeat: 0,
     turnDeadline: 0,
+    turnSoftDeadline: 0,
+    pendingSwap: null,
     lastPlay: null,
     passCount: 0,
     lastPlaySeat: -1,
@@ -89,6 +94,7 @@ function newRoom(code, hostId) {
     firstLeadSeat: 0,
     chat: [],
     turnTimer: null,
+    softTimer: null,
     botTimer: null,
     settleTimer: null,
     humans: new Map()
@@ -97,8 +103,60 @@ function newRoom(code, hostId) {
 
 function clearTimers(room) {
   if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
+  if (room.softTimer) { clearTimeout(room.softTimer); room.softTimer = null; }
   if (room.botTimer) { clearTimeout(room.botTimer); room.botTimer = null; }
   if (room.settleTimer) { clearTimeout(room.settleTimer); room.settleTimer = null; }
+}
+
+function canSwapPhase(room) {
+  return room.phase === "lobby" || room.phase === "settle" || room.phase === "matchover";
+}
+
+function rebindHumanSeats(room) {
+  for (const [sid, info] of room.humans) {
+    const idx = room.seats.findIndex((s) => s.socketId === sid);
+    if (idx >= 0) {
+      info.seat = idx;
+      const sock = io.sockets.sockets.get(sid);
+      if (sock) sock.data.seat = idx;
+    }
+  }
+}
+
+function mapSeatPair(x, a, b) {
+  if (x === a) return b;
+  if (x === b) return a;
+  return x;
+}
+
+function remapSeatPair(room, a, b) {
+  room.currentSeat = mapSeatPair(room.currentSeat, a, b);
+  room.firstLeadSeat = mapSeatPair(room.firstLeadSeat, a, b);
+  room.lastPlaySeat = mapSeatPair(room.lastPlaySeat, a, b);
+  if (room.lastPlay) room.lastPlay.seat = mapSeatPair(room.lastPlay.seat, a, b);
+  if (room.finishes) room.finishes.forEach((f) => { f.seat = mapSeatPair(f.seat, a, b); });
+  if (room.lastPlaces) room.lastPlaces.forEach((pl) => { pl.seat = mapSeatPair(pl.seat, a, b); });
+  if (room.tribute) {
+    room.tribute.from = mapSeatPair(room.tribute.from, a, b);
+    room.tribute.to = mapSeatPair(room.tribute.to, a, b);
+  }
+  if (room.settle && room.settle.places) {
+    room.settle.places.forEach((pl) => { pl.seat = mapSeatPair(pl.seat, a, b); });
+  }
+  if (room.pendingSwap) {
+    room.pendingSwap.from = mapSeatPair(room.pendingSwap.from, a, b);
+    room.pendingSwap.to = mapSeatPair(room.pendingSwap.to, a, b);
+  }
+}
+
+function swapSeats(room, a, b) {
+  if (a === b || a < 0 || b < 0 || a > 3 || b > 3) return false;
+  const tmp = room.seats[a];
+  room.seats[a] = room.seats[b];
+  room.seats[b] = tmp;
+  remapSeatPair(room, a, b);
+  rebindHumanSeats(room);
+  return true;
 }
 
 function seatOfSocket(room, socketId) {
@@ -132,7 +190,17 @@ function snapshot(room, forSeat) {
     round: room.round,
     currentSeat: room.currentSeat,
     turnDeadline: room.turnDeadline,
-    turnMs: TURN_MS,
+    turnSoftDeadline: room.turnSoftDeadline,
+    turnMs: TURN_FORCE_MS,
+    turnSoftMs: TURN_SOFT_MS,
+    pendingSwap: room.pendingSwap
+      ? {
+          from: room.pendingSwap.from,
+          to: room.pendingSwap.to,
+          fromName: room.seats[room.pendingSwap.from] ? room.seats[room.pendingSwap.from].name : "",
+          toName: room.seats[room.pendingSwap.to] ? room.seats[room.pendingSwap.to].name : ""
+        }
+      : null,
     dealUntil: room.dealUntil,
     lastPlay: room.lastPlay
       ? { seat: room.lastPlay.seat, cards: room.lastPlay.cards, combo: room.lastPlay.combo }
@@ -154,6 +222,7 @@ function snapshot(room, forSeat) {
       muted: s.muted,
       speaking: s.speaking,
       auto: !!s.auto,
+      autoTakeover: !!s.autoTakeover,
       cardCount: s.hand.length,
       finishedRank: s.finishedRank,
       isSelf: i === forSeat,
@@ -200,6 +269,8 @@ function fillBots(room) {
         online: true,
         muted: true,
         speaking: false,
+        auto: false,
+        autoTakeover: false,
         hand: [],
         finishedRank: 0,
         socketId: null
@@ -232,34 +303,40 @@ function isAutoSeat(player) {
 
 function startTurnClock(room) {
   if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
+  if (room.softTimer) { clearTimeout(room.softTimer); room.softTimer = null; }
   if (room.botTimer) { clearTimeout(room.botTimer); room.botTimer = null; }
   if (room.phase !== "playing") return;
   const seat = room.currentSeat;
   const player = room.seats[seat];
   const auto = isAutoSeat(player);
-  room.turnDeadline = now() + (auto ? 2500 : TURN_MS);
+  room.turnDeadline = now() + (auto ? 2500 : TURN_FORCE_MS);
+  room.turnSoftDeadline = auto ? 0 : now() + TURN_SOFT_MS;
   if (auto) {
     const delay = BOT_MIN + Math.floor(Math.random() * (BOT_MAX - BOT_MIN));
     room.botTimer = setTimeout(() => {
-      try { botAct(room, seat); } catch (e) { console.error("bot", e); timeoutAct(room, seat); }
+      try { botAct(room, seat); } catch (e) { console.error("bot", e); timeoutAct(room, seat, { force: true }); }
     }, delay);
+  } else {
+    room.softTimer = setTimeout(() => {
+      try { timeoutAct(room, seat, { soft: true }); } catch (e) { console.error("soft", e); }
+    }, TURN_SOFT_MS);
   }
   room.turnTimer = setTimeout(() => {
-    try { timeoutAct(room, seat); } catch (e) { console.error("timeout", e); }
-  }, auto ? 2500 : TURN_MS);
+    try { timeoutAct(room, seat, { force: true }); } catch (e) { console.error("timeout", e); }
+  }, auto ? 2500 : TURN_FORCE_MS);
 }
 
-function timeoutAct(room, seat) {
+function timeoutAct(room, seat, opts) {
+  opts = opts || {};
   if (room.phase !== "playing" || room.currentSeat !== seat) return;
   const p = room.seats[seat];
-  if (p && !p.isBot) p.auto = true;
-  if (room.lastPlay && room.lastPlay.seat !== seat) {
-    doPass(room, seat, true);
-  } else {
-    const hand = room.seats[seat].hand;
-    const cards = Combo.leadPlay(hand, room.level) || [Combo.lowestCard(hand, room.level)];
-    doPlay(room, seat, cards, true);
+  if (opts.soft) {
+    if (!p || p.isBot || p.auto || !p.online || !p.autoTakeover) return;
+    botAct(room, seat);
+    return;
   }
+  if (p && !p.isBot) p.auto = true;
+  botAct(room, seat);
 }
 
 function botAct(room, seat) {
@@ -409,6 +486,7 @@ function startMatchRound(room) {
 }
 
 function doPlay(room, seat, cardIds, auto) {
+  if (!auto && room.seats[seat] && !room.seats[seat].isBot) room.seats[seat].auto = false;
   if (room.phase !== "playing") return { ok: false, err: "还没开始出牌" };
   if (now() < room.dealUntil) return { ok: false, err: "正在发牌" };
   if (room.currentSeat !== seat) return { ok: false, err: "还没轮到你" };
@@ -446,18 +524,22 @@ function doPlay(room, seat, cardIds, auto) {
   const fx = { type: "play", seat, cards: uniq, combo, auto: !!auto };
   if (Combo.isBombType(combo)) {
     fx.bomb = combo.type === "joker4" ? "joker4" : combo.type === "joker3" ? "joker3" : "bomb";
+    fx.special = true;
+  } else if (Combo.isSpecialType(combo)) {
+    fx.special = true;
   }
   emitTo(room, "fx", fx);
 
   if (checkRoundEnd(room)) return { ok: true };
 
   room.currentSeat = nextActive(room, seat);
-  emitRoom(room);
   startTurnClock(room);
+  emitRoom(room);
   return { ok: true };
 }
 
 function doPass(room, seat, auto) {
+  if (!auto && room.seats[seat] && !room.seats[seat].isBot) room.seats[seat].auto = false;
   if (room.phase !== "playing") return { ok: false, err: "还没开始" };
   if (room.currentSeat !== seat) return { ok: false, err: "还没轮到你" };
   if (!room.lastPlay || room.lastPlay.seat === seat) {
@@ -478,8 +560,8 @@ function doPass(room, seat, auto) {
   } else {
     room.currentSeat = nextActive(room, seat);
   }
-  emitRoom(room);
   startTurnClock(room);
+  emitRoom(room);
   return { ok: true };
 }
 
@@ -649,17 +731,19 @@ io.on("connection", (socket) => {
         }
       }
       if (!room.hostId) room.hostId = socket.id;
+      const prev = room.seats[seat] || emptySeat();
       room.seats[seat] = {
         id: socket.id,
         name,
         isBot: false,
         ready: room.phase !== "lobby",
         auto: false,
+        autoTakeover: !!(data && data.autoTakeover) || !!prev.autoTakeover,
         online: true,
         muted: true,
         speaking: false,
-        hand: room.seats[seat].hand || [],
-        finishedRank: room.seats[seat].finishedRank || 0,
+        hand: prev.hand || [],
+        finishedRank: prev.finishedRank || 0,
         socketId: socket.id
       };
       room.humans.set(socket.id, { seat, name });
@@ -744,6 +828,109 @@ io.on("connection", (socket) => {
     if (!finishTribute(room, card)) errorTo(socket, "选一张还贡的牌");
   });
 
+
+  socket.on("claimSeat", (data) => {
+    try {
+      const room = rooms.get(socket.data.room);
+      if (!room) { errorTo(socket, "还没进房间，请刷新再进"); return; }
+      const from = seatOfSocket(room, socket.id);
+      const to = data && Number(data.seat);
+      if (from < 0) { errorTo(socket, "你不在这桌"); return; }
+      if (!Number.isInteger(to) || to < 0 || to > 3) { errorTo(socket, "座位无效"); return; }
+      if (from === to) return;
+      if (!canSwapPhase(room)) { errorTo(socket, "现在换座不安全"); return; }
+      const target = room.seats[to];
+      if (!target.id || target.isBot) {
+        room.pendingSwap = null;
+        swapSeats(room, from, to);
+        emitTo(room, "fx", { type: "seat-claim", from, to });
+        emitRoom(room);
+        return;
+      }
+      room.pendingSwap = { from, to, t: now() };
+      emitTo(room, "swap-request", {
+        from, to,
+        fromName: room.seats[from].name,
+        toName: room.seats[to].name
+      });
+      emitRoom(room);
+    } catch (e) {
+      console.error("claimSeat", e);
+    }
+  });
+
+  socket.on("requestSwap", (data) => {
+    try {
+      const room = rooms.get(socket.data.room);
+      if (!room) { errorTo(socket, "还没进房间，请刷新再进"); return; }
+      const from = seatOfSocket(room, socket.id);
+      const to = data && Number(data.seat);
+      if (from < 0) { errorTo(socket, "你不在这桌"); return; }
+      if (!Number.isInteger(to) || to < 0 || to > 3) { errorTo(socket, "座位无效"); return; }
+      if (from === to) return;
+      if (!canSwapPhase(room)) { errorTo(socket, "现在换座不安全"); return; }
+      const target = room.seats[to];
+      if (!target.id || target.isBot) {
+        room.pendingSwap = null;
+        swapSeats(room, from, to);
+        emitTo(room, "fx", { type: "seat-claim", from, to });
+        emitRoom(room);
+        return;
+      }
+      room.pendingSwap = { from, to, t: now() };
+      emitTo(room, "swap-request", {
+        from, to,
+        fromName: room.seats[from].name,
+        toName: room.seats[to].name
+      });
+      emitRoom(room);
+    } catch (e) {
+      console.error("requestSwap", e);
+    }
+  });
+
+  socket.on("respondSwap", (data) => {
+    try {
+      const room = rooms.get(socket.data.room);
+      if (!room) return;
+      const seat = seatOfSocket(room, socket.id);
+      if (!room.pendingSwap) { errorTo(socket, "没有换座请求"); return; }
+      if (seat !== room.pendingSwap.to) { errorTo(socket, "没有换座请求"); return; }
+      const accept = !!(data && data.accept);
+      const from = room.pendingSwap.from;
+      const to = room.pendingSwap.to;
+      room.pendingSwap = null;
+      if (accept) {
+        if (!canSwapPhase(room)) { errorTo(socket, "现在换座不安全"); emitRoom(room); return; }
+        swapSeats(room, from, to);
+      }
+      emitTo(room, "swap-result", { accept, from, to });
+      emitRoom(room);
+    } catch (e) {
+      console.error("respondSwap", e);
+    }
+  });
+
+  socket.on("setAuto", (data) => {
+    const room = rooms.get(socket.data.room);
+    if (!room) return;
+    const seat = seatOfSocket(room, socket.id);
+    if (seat < 0) return;
+    const p = room.seats[seat];
+    p.auto = !!(data && data.on);
+    if (room.phase === "playing" && room.currentSeat === seat) startTurnClock(room);
+    emitRoom(room);
+  });
+
+  socket.on("setAutoTakeover", (data) => {
+    const room = rooms.get(socket.data.room);
+    if (!room) return;
+    const seat = seatOfSocket(room, socket.id);
+    if (seat < 0) return;
+    room.seats[seat].autoTakeover = !!(data && data.on);
+    emitRoom(room);
+  });
+
   socket.on("continue", () => {
     const room = rooms.get(socket.data.room);
     if (!room) return;
@@ -817,13 +1004,14 @@ io.on("connection", (socket) => {
       const s = room.seats[seat];
       s.online = false;
       s.speaking = false;
-      if (room.phase === "playing") s.auto = true;
+      if (room.phase === "playing" || room.phase === "tribute") s.auto = true;
       if (room.hostId === socket.id) {
         const other = room.seats.find((x) => x.socketId && x.socketId !== socket.id);
         if (other) room.hostId = other.socketId;
       }
     }
     emitRoom(room);
+    if (room.phase === "playing" && seat >= 0 && room.currentSeat === seat) startTurnClock(room);
     setTimeout(() => cleanupRoom(code), 15000);
   });
 });

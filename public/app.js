@@ -7,6 +7,8 @@
   var animLock = false;
   var dealPending = false;
   var sfxOn = true;
+  var bgmOn = false;
+  try { bgmOn = localStorage.getItem("nl-bgm") === "1"; } catch (e0) {}
   var audioCtx = null;
   var localStream = null;
   var pcs = {};
@@ -95,12 +97,102 @@
         Sfx.tone(c, 140, 0.3, 0.1, "square");
       });
     },
+    sting: function (kind) {
+      this.play(function (c) {
+        var notes = kind === "joker4" ? [196, 262, 330, 392, 523]
+          : kind === "joker3" ? [165, 220, 277, 330]
+          : [98, 147, 196, 247];
+        notes.forEach(function (f, i) {
+          setTimeout(function () { Sfx.tone(c, f, 0.28, 0.1, i % 2 ? "triangle" : "sawtooth"); }, i * 55);
+        });
+        Sfx.noise(c, 0.32, 0.14, kind === "joker4" ? 140 : 220);
+      });
+    },
     win: function () {
       this.play(function (c) {
         [523, 659, 784, 1046].forEach(function (f, i) {
           setTimeout(function () { Sfx.tone(c, f, 0.22, 0.1, "triangle"); }, i * 110);
         });
       });
+    }
+  };
+
+  var Bgm = {
+    running: false,
+    nodes: [],
+    _tick: 0,
+    quietTone: function (ctx, freq, dur, vol) {
+      try {
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(vol || 0.03, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + dur);
+      } catch (e) {}
+    },
+    start: function () {
+      var ctx = ensureAudio();
+      if (!ctx || this.running) return;
+      this.running = true;
+      var master = ctx.createGain();
+      master.gain.value = 0.042;
+      master.connect(ctx.destination);
+      function pad(freq, type, detune) {
+        var o = ctx.createOscillator();
+        o.type = type || "sine";
+        o.frequency.value = freq;
+        o.detune.value = detune || 0;
+        var f = ctx.createBiquadFilter();
+        f.type = "lowpass";
+        f.frequency.value = 480;
+        var g = ctx.createGain();
+        g.gain.value = 0.32;
+        var lfo = ctx.createOscillator();
+        lfo.type = "sine";
+        lfo.frequency.value = 0.06 + Math.random() * 0.05;
+        var lg = ctx.createGain();
+        lg.gain.value = 70;
+        lfo.connect(lg); lg.connect(f.frequency);
+        o.connect(f); f.connect(g); g.connect(master);
+        o.start(); lfo.start();
+        Bgm.nodes.push(o, lfo);
+      }
+      pad(196, "sine", -8);
+      pad(247, "triangle", 7);
+      pad(294, "sine", 3);
+      this.nodes.push(master);
+      this._seq = 0;
+      this._tick = setInterval(function () {
+        if (!Bgm.running) return;
+        var scale = [196, 220, 247, 262, 294, 330];
+        Bgm.quietTone(ctx, scale[Bgm._seq % scale.length], 1.8, 0.028);
+        Bgm._seq++;
+      }, 3400);
+    },
+    stop: function () {
+      this.running = false;
+      if (this._tick) { clearInterval(this._tick); this._tick = 0; }
+      this.nodes.forEach(function (n) {
+        try { if (n.stop) n.stop(); } catch (e) {}
+        try { n.disconnect(); } catch (e2) {}
+      });
+      this.nodes = [];
+    },
+    syncBtn: function () {
+      var btn = $("btn-bgm");
+      if (!btn) return;
+      btn.classList.toggle("on", !!bgmOn);
+      btn.classList.toggle("muted", !bgmOn);
+    },
+    set: function (on) {
+      bgmOn = !!on;
+      try { localStorage.setItem("nl-bgm", bgmOn ? "1" : "0"); } catch (e) {}
+      this.syncBtn();
+      if (bgmOn) this.start();
+      else this.stop();
     }
   };
 
@@ -333,6 +425,9 @@
       layer.appendChild(fl);
       setTimeout(function () { fl.remove(); }, 400);
     }
+    var ink = document.createElement("div");
+    ink.className = "fx-ink " + (kind === "joker4" ? "king" : kind === "joker3" ? "triple" : "gold");
+    layer.appendChild(ink);
     var w1 = document.createElement("div");
     w1.className = "shockwave" + (kind === "joker4" || kind === "joker3" ? " red" : "");
     layer.appendChild(w1);
@@ -341,7 +436,8 @@
     word.textContent = kind === "joker4" ? T("fx.joker4") : kind === "joker3" ? T("fx.joker3") : T("fx.bomb");
     layer.appendChild(word);
     Sfx.bomb();
-    setTimeout(function () { w1.remove(); word.remove(); }, 1000);
+    Sfx.sting(kind);
+    setTimeout(function () { w1.remove(); word.remove(); ink.remove(); }, 1100);
   }
 
   function finishFX(fx) {
@@ -369,12 +465,36 @@
     setTimeout(function () { p.remove(); }, 1300);
   }
 
+  function canClaimNow() {
+    return !!(state && (state.phase === "lobby" || state.phase === "settle" || state.phase === "matchover"));
+  }
+
+  function tryClaim(seatIdx) {
+    if (!state) return;
+    if (!canClaimNow()) { toast(T("err.swap_unsafe")); return; }
+    if (seatIdx === state.selfSeat) return;
+    var s = state.seats[seatIdx];
+    if (s && s.occupied && !s.isBot) {
+      toast(T("toast.swap_sent", { name: s.name || T("turn.opponent") }));
+      socket.emit("requestSwap", { seat: seatIdx });
+      return;
+    }
+    socket.emit("claimSeat", { seat: seatIdx });
+  }
+
+  function bindSeatClick(el, rel, seatIdx) {
+    var claim = canClaimNow() && rel !== "south";
+    el.classList.toggle("claimable", !!claim);
+    el.onclick = claim ? function () { tryClaim(seatIdx); } : null;
+  }
+
   function renderSeat(rel, seatIdx, s) {
     var el = seatEl(rel);
     if (!el) return;
     if (!s || !s.occupied) {
-      el.innerHTML = '<div class="seat-card"><div class="avatar">' + T("seat.empty_av") + '</div><div class="seat-meta"><div class="nm">' + T("seat.empty") + "</div></div></div>";
+      el.innerHTML = '<div class="seat-card"><div class="avatar">' + T("seat.empty_av") + '</div><div class="seat-meta"><div class="nm">' + T("seat.empty") + '</div><div class="sub">' + T("seat.claim") + "</div></div></div>";
       el.classList.remove("turn");
+      bindSeatClick(el, rel, seatIdx);
       return;
     }
     var init = (s.name || "?").slice(0, 1);
@@ -383,23 +503,33 @@
     var n = Math.min(s.cardCount, 4);
     if (rel !== "south" && s.cardCount > 0 && state.phase !== "lobby") {
       stacks = '<div class="back-stack">';
-      for (var i = 0; i < n; i++) stacks += '<div class="mini-back" style="left:' + (i * 2) + 'px;top:' + (i * -1) + 'px"></div>';
+      for (var i = 0; i < n; i++) stacks += '<div class="mini-back" style="left:' + (i * 3) + 'px;top:' + (i * -2) + 'px"></div>';
       stacks += "</div>";
     }
-    el.innerHTML =
-      '<div class="seat-card">' +
-        '<div class="seat-face">' +
-          '<div class="avatar' + (s.isBot ? " bot" : "") + (s.speaking ? " speaking" : "") + '">' + init + "</div>" +
-          stacks +
-        "</div>" +
-        '<div class="seat-meta"><div class="nm">' + escapeHtml(s.name) +
-          (partner ? '<span class="partner-tag">' + T("seat.partner") + "</span>" : "") + "</div>" +
-          '<div class="sub">' + (s.isBot ? T("seat.bot") : (s.auto ? T("seat.auto") : (s.online ? T("seat.online") : T("seat.offline")))) +
-          (state.phase !== "lobby" ? " · " + T("seat.cards", { n: s.cardCount }) : (s.ready ? " · " + T("seat.ready") : "")) +
-          (s.finishedRank ? " · " + placeLabel(s.finishedRank) : "") +
-          "</div></div>" +
-      "</div>";
+    if (rel === "south") {
+      el.innerHTML =
+        '<div class="seat-card"><div class="you-chip"><span class="dot"></span>' +
+        escapeHtml(s.name || T("seat.you")) +
+        (s.auto ? " · " + T("seat.auto") : "") +
+        "</div></div>";
+    } else {
+      el.innerHTML =
+        '<div class="seat-card">' +
+          '<div class="seat-face">' +
+            '<div class="avatar' + (s.isBot ? " bot" : "") + (s.speaking ? " speaking" : "") + '">' + init + "</div>" +
+            stacks +
+          "</div>" +
+          '<div class="seat-meta"><div class="nm">' + escapeHtml(s.name) +
+            (partner ? '<span class="partner-tag">' + T("seat.partner") + "</span>" : "") + "</div>" +
+            '<div class="sub">' + (s.isBot ? T("seat.bot") : (s.auto ? T("seat.auto") : (s.online ? T("seat.online") : T("seat.offline")))) +
+            (state.phase !== "lobby" ? " · " + T("seat.cards", { n: s.cardCount }) : (s.ready ? " · " + T("seat.ready") : "")) +
+            (s.finishedRank ? " · " + placeLabel(s.finishedRank) : "") +
+            (canClaimNow() ? " · " + (s.isBot ? T("seat.claim") : T("seat.swap")) : "") +
+            "</div></div>" +
+        "</div>";
+    }
     el.classList.toggle("turn", state.phase === "playing" && state.currentSeat === seatIdx);
+    bindSeatClick(el, rel, seatIdx);
     updateTimerRing(el, seatIdx);
   }
 
@@ -422,6 +552,7 @@
       var idx = relSeatIndex(rel);
       if (idx >= 0) updateTimerRing(el, idx);
     });
+    updateTurnBanner();
   }
 
   function relSeatIndex(rel) {
@@ -444,6 +575,20 @@
     wrap.onclick = function () { toggleSelect(id); };
     return wrap;
   }
+  function fanRow(row) {
+    if (!row) return;
+    var cards = row.children;
+    var n = cards.length;
+    var spread = Math.min(28, 2.4 * n);
+    var i, t, deg, y;
+    for (i = 0; i < n; i++) {
+      t = n <= 1 ? 0 : (i / (n - 1) - 0.5);
+      deg = t * spread;
+      y = Math.abs(t) * 12;
+      cards[i].style.setProperty("--fan", deg.toFixed(2) + "deg");
+      cards[i].style.setProperty("--fan-y", y.toFixed(1) + "px");
+    }
+  }
   function renderHand(ids) {
     handEl.innerHTML = "";
     var list = ids || [];
@@ -456,7 +601,11 @@
       (i < mid ? r1 : r2).appendChild(makeHandCard(id, i));
     });
     handEl.appendChild(r1);
-    if (list.length > mid) handEl.appendChild(r2);
+    fanRow(r1);
+    if (list.length > mid) {
+      handEl.appendChild(r2);
+      fanRow(r2);
+    }
   }
 
   function renderLastPlay(lp) {
@@ -505,23 +654,39 @@
     });
   }
 
+  function meSeat() {
+    return state && state.seats && state.seats[state.selfSeat] ? state.seats[state.selfSeat] : null;
+  }
+
   function renderActions() {
     var phase = state ? state.phase : "lobby";
     var myTurn = state && state.phase === "playing" && state.currentSeat === state.selfSeat;
-    var isHost = state && state.host === state.selfSeat;
+    var me = meSeat();
     $("btn-play").classList.toggle("hidden", phase !== "playing");
     $("btn-pass").classList.toggle("hidden", phase !== "playing");
     $("btn-hint").classList.toggle("hidden", phase !== "playing");
     $("btn-ready").classList.toggle("hidden", phase !== "lobby");
     $("btn-start").classList.toggle("hidden", phase !== "lobby" && phase !== "matchover");
     $("btn-return").classList.toggle("hidden", phase !== "tribute");
+    if ($("btn-auto")) $("btn-auto").classList.toggle("hidden", phase !== "playing" && phase !== "tribute");
+    if ($("btn-autotake")) $("btn-autotake").classList.toggle("hidden", !state);
     $("btn-play").disabled = animLock || !myTurn;
     $("btn-pass").disabled = animLock || !myTurn || !state.lastPlay || state.lastPlay.seat === state.selfSeat;
     $("btn-hint").disabled = animLock || !myTurn;
     $("btn-start").disabled = animLock;
-    if (state && state.seats[state.selfSeat]) {
-      $("btn-ready").textContent = state.seats[state.selfSeat].ready ? T("act.unready") : T("act.ready");
+    if (me) {
+      $("btn-ready").textContent = me.ready ? T("act.unready") : T("act.ready");
+      if ($("btn-auto")) $("btn-auto").textContent = me.auto ? T("act.unauto") : T("act.auto");
+      if ($("btn-autotake")) {
+        $("btn-autotake").textContent = me.autoTakeover ? T("act.autotake_on") : T("act.autotake_off");
+        $("btn-autotake").classList.toggle("on", !!me.autoTakeover);
+      }
     }
+  }
+
+  function remainSec(deadline) {
+    if (!deadline) return 0;
+    return Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
   }
 
   function updateTurnBanner() {
@@ -529,9 +694,33 @@
     if (!el || !state) return;
     if (state.phase !== "playing") { el.classList.add("hidden"); return; }
     var mine = state.currentSeat === state.selfSeat;
+    var me = meSeat();
+    var sec = remainSec(state.turnDeadline);
+    var extra = T("turn.left", { s: sec });
+    if (mine && me && me.autoTakeover && state.turnSoftDeadline && Date.now() < state.turnSoftDeadline) {
+      extra = T("turn.soft", { s: remainSec(state.turnSoftDeadline) });
+    }
     el.classList.remove("hidden");
-    el.textContent = mine ? T("turn.yours") : T("turn.wait", { name: state.turnName || T("turn.opponent") });
+    el.innerHTML = (mine ? T("turn.yours") : T("turn.wait", { name: state.turnName || T("turn.opponent") })) +
+      '<span class="cd">' + extra + "</span>";
     el.classList.toggle("mine", !!mine);
+    el.classList.toggle("warn", sec <= 10);
+  }
+
+  function showSwapModal(info) {
+    var box = $("swap-modal");
+    if (!box || !info || !state) return;
+    if (info.to !== state.selfSeat) return;
+    $("swap-text").textContent = T("swap.ask", { name: info.fromName || T("turn.opponent") });
+    box.classList.remove("hidden");
+  }
+  function hideSwapModal() {
+    var box = $("swap-modal");
+    if (box) box.classList.add("hidden");
+  }
+  function syncSwapModal() {
+    if (!state || !state.pendingSwap || state.pendingSwap.to !== state.selfSeat) hideSwapModal();
+    else showSwapModal(state.pendingSwap);
   }
 
   function renderHUD() {
@@ -566,6 +755,7 @@
     }
     if (st.phase === "settle" || st.phase === "matchover") showSettle(st.settle);
     else hideSettle();
+    syncSwapModal();
   }
 
   function showSettle(s) {
@@ -727,6 +917,43 @@
     $("btn-sfx").classList.toggle("muted", !sfxOn);
     if (sfxOn) ensureAudio();
   };
+  if ($("btn-bgm")) {
+    Bgm.syncBtn();
+    $("btn-bgm").onclick = function () {
+      ensureAudio();
+      Bgm.set(!bgmOn);
+    };
+  }
+  if ($("btn-auto")) {
+    $("btn-auto").onclick = function () {
+      if (!ensureInRoom()) return;
+      var me = meSeat();
+      var on = !(me && me.auto);
+      socket.emit("setAuto", { on: on });
+      toast(on ? T("toast.auto_on") : T("toast.auto_off"));
+    };
+  }
+  if ($("btn-autotake")) {
+    $("btn-autotake").onclick = function () {
+      if (!ensureInRoom()) return;
+      var me = meSeat();
+      var on = !(me && me.autoTakeover);
+      socket.emit("setAutoTakeover", { on: on });
+      toast(on ? T("toast.autotake_on") : T("toast.autotake_off"));
+    };
+  }
+  if ($("btn-swap-yes")) {
+    $("btn-swap-yes").onclick = function () {
+      socket.emit("respondSwap", { accept: true });
+      hideSwapModal();
+    };
+  }
+  if ($("btn-swap-no")) {
+    $("btn-swap-no").onclick = function () {
+      socket.emit("respondSwap", { accept: false });
+      hideSwapModal();
+    };
+  }
 
   $("btn-mic").onclick = async function () {
     ensureAudio();
@@ -820,6 +1047,7 @@
       toast(T("toast.tribute_give", { name: (state && state.seats[fx.from] ? state.seats[fx.from].name : T("place.4")) }));
     }
     if (fx.type === "tribute-back") toast(T("toast.tribute_back"));
+    if (fx.type === "seat-claim" && state && fx.to === state.selfSeat) toast(T("toast.claimed"));
   });
 
   socket.on("hint", function (d) {
@@ -845,6 +1073,24 @@
   });
 
   socket.on("chat", function () {});
+
+  socket.on("swap-request", function (info) {
+    if (!info || !state) return;
+    if (info.to === state.selfSeat) showSwapModal(info);
+    else if (info.from === state.selfSeat) toast(T("toast.swap_sent", { name: info.toName || T("turn.opponent") }));
+  });
+  socket.on("swap-result", function (info) {
+    hideSwapModal();
+    if (!info) return;
+    var other = "";
+    if (state) {
+      if (info.from === state.selfSeat) other = (state.seats[info.to] && state.seats[info.to].name) || "";
+      if (info.to === state.selfSeat) other = (state.seats[info.from] && state.seats[info.from].name) || "";
+    }
+    if (info.from === (state && state.selfSeat) || info.to === (state && state.selfSeat)) {
+      toast(info.accept ? T("toast.swap_accept", { name: other || T("turn.opponent") }) : T("toast.swap_decline", { name: other || T("turn.opponent") }));
+    }
+  });
 
   socket.on("voice-peers", function (info) {
     (info.peers || []).forEach(function (p) {
@@ -935,7 +1181,11 @@
   }
   loop();
 
-  window.addEventListener("pointerdown", function () { ensureAudio(); }, { once: true });
+  window.addEventListener("pointerdown", function () {
+    ensureAudio();
+    if (bgmOn) Bgm.set(true);
+  }, { once: true });
+  Bgm.syncBtn();
 
   window.__gdRefreshLang = function () {
     if (window.I18N) I18N.apply();
@@ -955,5 +1205,6 @@
       comboNameEl.textContent = comboLabel(state.lastPlay.combo);
     }
     if (state.phase === "settle" || state.phase === "matchover") showSettle(state.settle);
+    syncSwapModal();
   };
 })();

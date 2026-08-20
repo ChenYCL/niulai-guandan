@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>牛来掼蛋</title>
-  <link rel="stylesheet" href="/style.css?v=nl19" />
+  <link rel="stylesheet" href="/style.css?v=nl21" />
 </head>
 <body>
   <div id="orient-gate" class="orient-gate hidden">
@@ -40,6 +40,14 @@
   </div>
 
   <div id="table" class="screen hidden">
+    <div class="room-bg" aria-hidden="true">
+      <div class="room-wall"></div>
+      <div class="room-sconce room-sconce-l"></div>
+      <div class="room-sconce room-sconce-r"></div>
+      <div class="room-lamp"></div>
+      <div class="room-floor"></div>
+      <div class="room-vignette"></div>
+    </div>
     <header class="hud">
       <div class="hud-left">
         <div class="room-chip">
@@ -62,6 +70,7 @@
           <button type="button" data-lang="ja" title="日本語">日</button>
           <button type="button" data-lang="en" title="English">EN</button>
         </div>
+        <button id="btn-bgm" class="icon-btn muted" title="背景乐" data-i18n-title="hud.bgm">♪</button>
         <button id="btn-sfx" class="icon-btn" title="音效" data-i18n-title="hud.sfx">🔊</button>
         <button id="btn-mic" class="icon-btn" title="麦克风" data-i18n-title="hud.mic">🎤</button>
         <button id="btn-fs" class="icon-btn" title="全屏" data-i18n-title="hud.fs">⛶</button>
@@ -69,20 +78,30 @@
     </header>
 
     <div class="table-frame">
-      <div class="wood-rim">
-        <div class="felt" id="felt">
-          <canvas id="felt-logo" class="felt-logo" width="720" height="220"></canvas>
-          <div class="center-stack" id="center-stack">
-            <div class="last-play" id="last-play"></div>
-            <div class="combo-name" id="combo-name"></div>
-            <div class="turn-banner hidden" id="turn-banner"></div>
+      <div class="table-scene">
+        <div class="table-stage">
+          <div class="table-shadow"></div>
+          <div class="wood-rim">
+            <div class="rim-gold"></div>
+            <div class="rim-shine"></div>
+            <div class="felt" id="felt">
+              <canvas id="felt-grain" class="felt-grain" width="640" height="360"></canvas>
+              <canvas id="felt-logo" class="felt-logo" width="720" height="220"></canvas>
+              <div class="center-stack" id="center-stack">
+                <div class="last-play" id="last-play"></div>
+                <div class="combo-name" id="combo-name"></div>
+              </div>
+              <div class="deck-pile" id="deck-pile"></div>
+            </div>
           </div>
-          <div class="deck-pile" id="deck-pile"></div>
-          <div class="seat" data-rel="north" id="seat-north"></div>
-          <div class="seat" data-rel="west" id="seat-west"></div>
-          <div class="seat" data-rel="east" id="seat-east"></div>
-          <div class="seat self" data-rel="south" id="seat-south"></div>
         </div>
+      </div>
+      <div class="seat-layer">
+        <div class="seat" data-rel="north" id="seat-north"></div>
+        <div class="seat" data-rel="west" id="seat-west"></div>
+        <div class="seat" data-rel="east" id="seat-east"></div>
+        <div class="seat self" data-rel="south" id="seat-south"></div>
+        <div class="turn-banner hidden" id="turn-banner"></div>
       </div>
     </div>
 
@@ -97,6 +116,18 @@
         <button id="btn-ready" class="btn gold hidden" data-i18n="act.ready">准备</button>
         <button id="btn-start" class="btn gold hidden" data-i18n="act.start">开始</button>
         <button id="btn-return" class="btn gold hidden" data-i18n="act.return">还贡</button>
+        <button id="btn-auto" class="btn dark hidden" data-i18n="act.auto">托管</button>
+        <button id="btn-autotake" class="btn ghost hidden" data-i18n="act.autotake_off">自动接管 · 关</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="swap-modal" class="hidden">
+    <div class="swap-panel">
+      <p id="swap-text"></p>
+      <div class="swap-actions">
+        <button id="btn-swap-yes" class="btn gold" data-i18n="swap.accept">接受</button>
+        <button id="btn-swap-no" class="btn dark" data-i18n="swap.decline">拒绝</button>
       </div>
     </div>
   </div>
@@ -109,9 +140,9 @@
   <div id="remote-box"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/combo.js?v=nl19"></script>
-  <script src="/theme.js?v=nl19"></script>
-  <script src="/i18n.js?v=nl19"></script>
-  <script src="/app.js?v=nl19"></script>
+  <script src="/combo.js?v=nl21"></script>
+  <script src="/theme.js?v=nl21"></script>
+  <script src="/i18n.js?v=nl21"></script>
+  <script src="/app.js?v=nl21"></script>
 </body>
 </html>
