@@ -128,9 +128,9 @@
   function feltTex(w, h) {
     return canvasTex(w, h, function (ctx, W, H) {
       var g = ctx.createRadialGradient(W * 0.5, H * 0.42, 8, W * 0.5, H * 0.5, W * 0.62);
-      g.addColorStop(0, "#1f8a62");
-      g.addColorStop(0.45, "#146b4a");
-      g.addColorStop(1, "#0a3a28");
+      g.addColorStop(0, "#2aa572");
+      g.addColorStop(0.45, "#178056");
+      g.addColorStop(1, "#0c4a32");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
       var i;
@@ -268,11 +268,11 @@
       color: 0xffffff
     });
     var goldMat = new THREE.MeshStandardMaterial({
-      color: 0xd4af37,
-      roughness: 0.28,
-      metalness: 0.65,
-      emissive: 0x3a2a08,
-      emissiveIntensity: 0.25
+      color: 0xe8c247,
+      roughness: 0.26,
+      metalness: 0.68,
+      emissive: 0x4a3408,
+      emissiveIntensity: 0.32
     });
     var legMat = new THREE.MeshStandardMaterial({
       color: 0x3a220e,

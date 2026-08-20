@@ -94,20 +94,21 @@
     pass: function () { this.play(function (c) { Sfx.tone(c, 520, 0.09, 0.07, "sine"); }); },
     bomb: function () {
       this.play(function (c) {
-        Sfx.noise(c, 0.45, 0.28, 180);
-        Sfx.tone(c, 70, 0.4, 0.2, "sawtooth");
-        Sfx.tone(c, 140, 0.3, 0.1, "square");
+        Sfx.noise(c, 0.38, 0.16, 220);
+        Sfx.tone(c, 98, 0.36, 0.09, "sine");
+        Sfx.tone(c, 147, 0.3, 0.06, "triangle");
       });
     },
     sting: function (kind) {
       this.play(function (c) {
-        var notes = kind === "joker4" ? [196, 262, 330, 392, 523]
-          : kind === "joker3" ? [165, 220, 277, 330]
-          : [98, 147, 196, 247];
+        var notes = kind === "joker4" ? [196, 294, 392, 294, 392]
+          : kind === "joker3" ? [196, 247, 294, 392]
+          : kind === "special" ? [196, 247, 294, 392]
+          : [196, 294, 247, 392];
         notes.forEach(function (f, i) {
-          setTimeout(function () { Sfx.tone(c, f, 0.28, 0.1, i % 2 ? "triangle" : "sawtooth"); }, i * 55);
+          setTimeout(function () { Sfx.tone(c, f, 0.26, kind === "special" ? 0.07 : 0.08, "triangle"); }, i * 70);
         });
-        Sfx.noise(c, 0.32, 0.14, kind === "joker4" ? 140 : 220);
+        Sfx.noise(c, 0.22, 0.08, kind === "special" ? 480 : 260);
       });
     },
     win: function () {
@@ -123,15 +124,19 @@
     running: false,
     nodes: [],
     _tick: 0,
-    quietTone: function (ctx, freq, dur, vol) {
+    pluck: function (ctx, dest, freq, dur, vol) {
       try {
         var o = ctx.createOscillator();
+        var f = ctx.createBiquadFilter();
         var g = ctx.createGain();
-        o.type = "sine";
+        o.type = "triangle";
         o.frequency.value = freq;
+        f.type = "lowpass";
+        f.frequency.value = 720;
+        f.Q.value = 0.6;
         g.gain.setValueAtTime(vol || 0.03, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-        o.connect(g); g.connect(ctx.destination);
+        o.connect(f); f.connect(g); g.connect(dest);
         o.start(); o.stop(ctx.currentTime + dur);
       } catch (e) {}
     },
@@ -140,39 +145,50 @@
       if (!ctx || this.running) return;
       this.running = true;
       var master = ctx.createGain();
-      master.gain.value = 0.042;
+      master.gain.value = 0.05;
       master.connect(ctx.destination);
-      function pad(freq, type, detune) {
+      function pad(freq, type, detune, vol) {
         var o = ctx.createOscillator();
         o.type = type || "sine";
         o.frequency.value = freq;
         o.detune.value = detune || 0;
         var f = ctx.createBiquadFilter();
         f.type = "lowpass";
-        f.frequency.value = 480;
+        f.frequency.value = 420;
+        f.Q.value = 0.7;
         var g = ctx.createGain();
-        g.gain.value = 0.32;
+        g.gain.value = vol || 0.22;
         var lfo = ctx.createOscillator();
         lfo.type = "sine";
-        lfo.frequency.value = 0.06 + Math.random() * 0.05;
+        lfo.frequency.value = 0.05;
         var lg = ctx.createGain();
-        lg.gain.value = 70;
+        lg.gain.value = 36;
         lfo.connect(lg); lg.connect(f.frequency);
         o.connect(f); f.connect(g); g.connect(master);
         o.start(); lfo.start();
         Bgm.nodes.push(o, lfo);
       }
-      pad(196, "sine", -8);
-      pad(247, "triangle", 7);
-      pad(294, "sine", 3);
+      pad(196, "sine", -6, 0.26);
+      pad(233.08, "sine", 4, 0.16);
+      pad(294, "triangle", 2, 0.1);
+      pad(98, "sine", 0, 0.14);
       this.nodes.push(master);
+      this._master = master;
       this._seq = 0;
+      var phrase = [
+        196, 294, 233, 294, 196, 294,
+        196, 349, 294, 262, 233, 294,
+        233, 294, 196, 294, 233, 349,
+        196, 262, 294, 233, 196, 294
+      ];
+      var eighthMs = Math.round((60 / 76 / 3) * 1000);
       this._tick = setInterval(function () {
-        if (!Bgm.running) return;
-        var scale = [196, 220, 247, 262, 294, 330];
-        Bgm.quietTone(ctx, scale[Bgm._seq % scale.length], 1.8, 0.028);
+        if (!Bgm.running || !Bgm._master) return;
+        var f = phrase[Bgm._seq % phrase.length];
+        Bgm.pluck(ctx, Bgm._master, f, 0.34, 0.034);
+        if (Bgm._seq % 6 === 0) Bgm.pluck(ctx, Bgm._master, 98, 0.5, 0.018);
         Bgm._seq++;
-      }, 3400);
+      }, eighthMs);
     },
     stop: function () {
       this.running = false;
@@ -182,6 +198,7 @@
         try { n.disconnect(); } catch (e2) {}
       });
       this.nodes = [];
+      this._master = null;
     },
     syncBtn: function () {
       var btn = $("btn-bgm");
@@ -450,7 +467,7 @@
     layer.appendChild(word);
     Sfx.bomb();
     Sfx.sting(kind);
-    setTimeout(function () { w1.remove(); word.remove(); ink.remove(); }, 1100);
+    setTimeout(function () { w1.remove(); word.remove(); ink.remove(); }, 750);
   }
 
   function specialFX(combo) {
@@ -466,7 +483,7 @@
     word.textContent = comboLabel(combo) || T("fx.special");
     layer.appendChild(word);
     Sfx.sting("special");
-    setTimeout(function () { ink.remove(); word.remove(); }, 1100);
+    setTimeout(function () { ink.remove(); word.remove(); }, 750);
   }
 
   function finishFX(fx) {
@@ -518,10 +535,10 @@
   }
 
   var COW_FACE = [
-    "/art/niulai.png?v=nl29",
-    "/art/diamonds.png?v=nl29",
-    "/art/clubs.png?v=nl29",
-    "/art/dad.png?v=nl29"
+    "/art/niulai.png?v=nl30",
+    "/art/diamonds.png?v=nl30",
+    "/art/clubs.png?v=nl30",
+    "/art/dad.png?v=nl30"
   ];
 
   function cowAvatar(seatIdx, extraClass, inner) {
