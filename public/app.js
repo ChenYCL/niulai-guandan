@@ -517,16 +517,31 @@
     el.onclick = claim ? function () { tryClaim(seatIdx); } : null;
   }
 
+  var COW_FACE = [
+    "/art/niulai.png?v=nl29",
+    "/art/diamonds.png?v=nl29",
+    "/art/clubs.png?v=nl29",
+    "/art/dad.png?v=nl29"
+  ];
+
+  function cowAvatar(seatIdx, extraClass, inner) {
+    var i = ((seatIdx % 4) + 4) % 4;
+    return '<div class="avatar cow cow-' + i + (extraClass || "") + '">' +
+      '<img class="cow-face" src="' + COW_FACE[i] + '" alt="" draggable="false" />' +
+      (inner || "") +
+      "</div>";
+  }
+
   function renderSeat(rel, seatIdx, s) {
     var el = seatEl(rel);
     if (!el) return;
     if (!s || !s.occupied) {
-      el.innerHTML = '<div class="seat-card"><div class="avatar">' + T("seat.empty_av") + '</div><div class="seat-meta"><div class="nm">' + T("seat.empty") + '</div><div class="sub">' + T("seat.claim") + "</div></div></div>";
+      el.innerHTML = '<div class="seat-card">' + cowAvatar(seatIdx, " empty") +
+        '<div class="seat-meta"><div class="nm">' + T("seat.empty") + '</div><div class="sub">' + T("seat.claim") + "</div></div></div>";
       el.classList.remove("turn");
       bindSeatClick(el, rel, seatIdx);
       return;
     }
-    var init = (s.name || "?").slice(0, 1);
     var partner = state && ((seatIdx % 2) === (state.selfSeat % 2)) && seatIdx !== state.selfSeat;
     var stacks = "";
     var n = Math.min(s.cardCount, 4);
@@ -537,7 +552,8 @@
     }
     if (rel === "south") {
       el.innerHTML =
-        '<div class="seat-card"><div class="you-chip"><span class="dot"></span>' +
+        '<div class="seat-card">' + cowAvatar(seatIdx, s.speaking ? " speaking" : "") +
+        '<div class="you-chip"><span class="dot"></span>' +
         escapeHtml(s.name || T("seat.you")) +
         (s.auto ? " · " + T("seat.auto") : "") +
         "</div></div>";
@@ -548,7 +564,7 @@
       el.innerHTML =
         '<div class="seat-card">' +
           '<div class="seat-face">' +
-            '<div class="avatar' + (s.isBot ? " bot" : "") + (s.speaking ? " speaking" : "") + '">' + init + countBadge + "</div>" +
+            cowAvatar(seatIdx, (s.isBot ? " bot" : "") + (s.speaking ? " speaking" : ""), countBadge) +
             stacks +
           "</div>" +
           '<div class="seat-meta"><div class="nm">' + escapeHtml(s.name) +
