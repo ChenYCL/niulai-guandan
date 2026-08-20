@@ -132,8 +132,8 @@
         o.type = "triangle";
         o.frequency.value = freq;
         f.type = "lowpass";
-        f.frequency.value = 1400;
-        f.Q.value = 0.6;
+        f.frequency.value = 2200;
+        f.Q.value = 0.8;
         g.gain.setValueAtTime(vol || 0.03, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
         o.connect(f); f.connect(g); g.connect(dest);
@@ -168,29 +168,35 @@
         o.start(); lfo.start();
         Bgm.nodes.push(o, lfo);
       }
-      pad(196, "sine", -4, 0.22);
-      pad(247, "sine", 5, 0.16);
-      pad(392, "triangle", 3, 0.12);
+      pad(146.8, "sine", -4, 0.14);
+      pad(220, "sine", 5, 0.10);
+      pad(293.7, "triangle", 3, 0.07);
       this.nodes.push(master);
       this._master = master;
       this._seq = 0;
-      var phrase = [
-        392, 440, 494, 392, 494, 440, 392, 330,
-        294, 330, 392, 440, 392, 330, 294, 247,
-        392, 494, 587, 494, 440, 392, 330, 392,
-        440, 392, 330, 294, 330, 392, 294, 247
+      // Original festive pentatonic homage (喜洋洋 / 步步高 character — not a licensed recording).
+      // D–E–F#–A–B, 16th pickups + rising steps, ~128 BPM bounce.
+      var grid = [
+        440, 494, 587, 0, 740, 0, 659, 0,
+        587, 0, 494, 0, 440, 0, 0, 0,
+        587, 659, 740, 0, 880, 0, 740, 0,
+        659, 0, 587, 0, 494, 0, 0, 0,
+        659, 740, 880, 0, 988, 0, 880, 0,
+        740, 0, 659, 0, 587, 0, 0, 0,
+        740, 880, 988, 0, 1175, 0, 880, 0,
+        740, 0, 587, 0, 440, 0, 0, 0
       ];
-      var bass = [196, 196, 247, 196, 165, 196, 247, 196];
-      var eighthMs = Math.round((60 / 112) * 500);
+      var bass = [294, 294, 220, 294, 330, 294, 220, 247];
+      var sixteenthMs = Math.round((60 / 128) * 250);
       this._tick = setInterval(function () {
         if (!Bgm.running || !Bgm._master) return;
         var i = Bgm._seq;
-        var f = phrase[i % phrase.length];
-        Bgm.pluck(ctx, Bgm._master, f, 0.26, 0.09);
-        if (i % 2 === 0) Bgm.pluck(ctx, Bgm._master, bass[(i / 2 | 0) % bass.length], 0.32, 0.06);
-        if (i % 4 === 0) {
+        var f = grid[i % grid.length];
+        if (f) Bgm.pluck(ctx, Bgm._master, f, 0.18, 0.08);
+        if (i % 4 === 0) Bgm.pluck(ctx, Bgm._master, bass[(i / 4 | 0) % bass.length], 0.28, 0.05);
+        if (i % 8 === 0) {
           try {
-            var n = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+            var n = ctx.createBuffer(1, ctx.sampleRate * 0.035, ctx.sampleRate);
             var d = n.getChannelData(0);
             var k;
             for (k = 0; k < d.length; k++) d[k] = (Math.random() * 2 - 1) * (1 - k / d.length);
@@ -198,15 +204,15 @@
             src.buffer = n;
             var bp = ctx.createBiquadFilter();
             bp.type = "highpass";
-            bp.frequency.value = 1800;
+            bp.frequency.value = 2200;
             var gg = ctx.createGain();
-            gg.gain.value = 0.055;
+            gg.gain.value = 0.045;
             src.connect(bp); bp.connect(gg); gg.connect(Bgm._master);
             src.start();
           } catch (e2) {}
         }
         Bgm._seq++;
-      }, eighthMs);
+      }, sixteenthMs);
     },
     stop: function () {
       this.running = false;
@@ -561,59 +567,229 @@
     "/art/dad.png?v=nl31"
   ];
 
+  function cowIndex(seatIdx) {
+    return ((seatIdx % 4) + 4) % 4;
+  }
+
   function cowAvatar(seatIdx, extraClass, inner) {
-    var i = ((seatIdx % 4) + 4) % 4;
+    var i = cowIndex(seatIdx);
     return '<div class="avatar cow cow-' + i + (extraClass || "") + '">' +
       '<img class="cow-face" src="' + COW_FACE[i] + '" alt="" draggable="false" />' +
       (inner || "") +
       "</div>";
   }
 
+  function seatSnap(rel, seatIdx, s) {
+    var occ = !!(s && s.occupied);
+    return {
+      occupied: occ,
+      seatIdx: seatIdx,
+      cow: cowIndex(seatIdx),
+      name: occ ? (s.name || "") : "",
+      cardCount: occ ? (s.cardCount || 0) : 0,
+      auto: !!(occ && s.auto),
+      isBot: !!(occ && s.isBot),
+      online: !!(occ && s.online),
+      ready: !!(occ && s.ready),
+      finishedRank: occ ? (s.finishedRank || 0) : 0,
+      speaking: !!(occ && s.speaking),
+      currentSeat: !!(state && state.phase === "playing" && state.currentSeat === seatIdx),
+      partner: !!(occ && state && ((seatIdx % 2) === (state.selfSeat % 2)) && seatIdx !== state.selfSeat),
+      phase: state ? state.phase : "",
+      claim: canClaimNow() && rel !== "south",
+      lang: (window.I18N && I18N.lang) || ""
+    };
+  }
+
+  function snapEq(a, b) {
+    if (!a || !b) return false;
+    return a.occupied === b.occupied && a.seatIdx === b.seatIdx && a.cow === b.cow &&
+      a.name === b.name && a.cardCount === b.cardCount && a.auto === b.auto &&
+      a.isBot === b.isBot && a.online === b.online && a.ready === b.ready &&
+      a.finishedRank === b.finishedRank && a.speaking === b.speaking &&
+      a.currentSeat === b.currentSeat && a.partner === b.partner &&
+      a.phase === b.phase && a.claim === b.claim && a.lang === b.lang;
+  }
+
+  function syncCowImg(av, seatIdx) {
+    var url = COW_FACE[cowIndex(seatIdx)];
+    var img = av.querySelector("img.cow-face");
+    if (!img) {
+      img = document.createElement("img");
+      img.className = "cow-face";
+      img.alt = "";
+      img.draggable = false;
+      img.src = url;
+      av.insertBefore(img, av.firstChild);
+      return img;
+    }
+    if (img.getAttribute("src") !== url) img.src = url;
+    return img;
+  }
+
+  function setAvatarMods(av, snap) {
+    av.classList.toggle("empty", !snap.occupied);
+    av.classList.toggle("bot", !!(snap.occupied && snap.isBot));
+    av.classList.toggle("speaking", !!(snap.occupied && snap.speaking));
+    var i = snap.cow;
+    av.classList.toggle("cow-0", i === 0);
+    av.classList.toggle("cow-1", i === 1);
+    av.classList.toggle("cow-2", i === 2);
+    av.classList.toggle("cow-3", i === 3);
+    if (!av.classList.contains("cow")) av.classList.add("cow");
+    if (!av.classList.contains("avatar")) av.classList.add("avatar");
+  }
+
+  function setCountBadge(av, snap, rel) {
+    var show = snap.occupied && rel !== "south" && state && state.phase !== "lobby";
+    var cnt = av.querySelector(".cnt");
+    if (!show) {
+      if (cnt) cnt.remove();
+      return;
+    }
+    if (!cnt) {
+      cnt = document.createElement("span");
+      cnt.className = "cnt";
+      av.appendChild(cnt);
+    }
+    var n = String(snap.cardCount);
+    if (cnt.textContent !== n) cnt.textContent = n;
+  }
+
+  function setBackStack(el, rel, snap) {
+    var face = el.querySelector(".seat-face");
+    var n = (rel !== "south" && snap.occupied && snap.cardCount > 0 && state && state.phase !== "lobby")
+      ? Math.min(snap.cardCount, 4) : 0;
+    var stack = el.querySelector(".back-stack");
+    if (n === 0) {
+      if (stack) stack.remove();
+      return;
+    }
+    if (!face) return;
+    if (!stack) {
+      stack = document.createElement("div");
+      stack.className = "back-stack";
+      face.appendChild(stack);
+    }
+    while (stack.children.length > n) stack.removeChild(stack.lastChild);
+    var i;
+    for (i = 0; i < n; i++) {
+      var m = stack.children[i];
+      if (!m) {
+        m = document.createElement("div");
+        m.className = "mini-back";
+        stack.appendChild(m);
+      }
+      m.style.left = (i * 3) + "px";
+      m.style.top = (i * -2) + "px";
+    }
+  }
+
+  function seatSubText(snap) {
+    if (!snap.occupied) return T("seat.claim");
+    var sub = snap.isBot ? T("seat.bot") : (snap.auto ? T("seat.auto") : (snap.online ? T("seat.online") : T("seat.offline")));
+    if (state && state.phase === "lobby" && snap.ready) sub += " · " + T("seat.ready");
+    if (snap.finishedRank) sub += " · " + placeLabel(snap.finishedRank);
+    if (canClaimNow()) sub += " · " + (snap.isBot ? T("seat.claim") : T("seat.swap"));
+    return sub;
+  }
+
+  function patchSeat(el, rel, seatIdx, s, snap) {
+    var av = el.querySelector(".avatar");
+    if (!av) return;
+    setAvatarMods(av, snap);
+    syncCowImg(av, seatIdx);
+    setCountBadge(av, snap, rel);
+    if (rel === "south" && snap.occupied) {
+      var chip = el.querySelector(".you-chip");
+      if (chip) {
+        var dot = chip.querySelector(".dot");
+        var label = (s.name || T("seat.you")) + (snap.auto ? " · " + T("seat.auto") : "");
+        chip.textContent = "";
+        if (!dot) {
+          dot = document.createElement("span");
+          dot.className = "dot";
+        }
+        chip.appendChild(dot);
+        chip.appendChild(document.createTextNode(label));
+      }
+    } else {
+      var nm = el.querySelector(".nm");
+      var sub = el.querySelector(".sub");
+      if (nm) {
+        nm.textContent = snap.occupied ? (s.name || "") : T("seat.empty");
+        if (snap.occupied && snap.partner) {
+          var tag = document.createElement("span");
+          tag.className = "partner-tag";
+          tag.textContent = T("seat.partner");
+          nm.appendChild(tag);
+        }
+      }
+      if (sub) sub.textContent = seatSubText(snap);
+      setBackStack(el, rel, snap);
+    }
+  }
+
+  function buildSeat(el, rel, seatIdx, s, snap) {
+    var html;
+    if (!snap.occupied) {
+      html = '<div class="seat-card">' + cowAvatar(seatIdx, " empty") +
+        '<div class="seat-meta"><div class="nm">' + T("seat.empty") + '</div><div class="sub">' + T("seat.claim") + "</div></div></div>";
+    } else if (rel === "south") {
+      html = '<div class="seat-card">' + cowAvatar(seatIdx, snap.speaking ? " speaking" : "") +
+        '<div class="you-chip"><span class="dot"></span>' +
+        escapeHtml(s.name || T("seat.you")) +
+        (snap.auto ? " · " + T("seat.auto") : "") +
+        "</div></div>";
+    } else {
+      var countBadge = state && state.phase !== "lobby"
+        ? '<span class="cnt">' + snap.cardCount + "</span>"
+        : "";
+      var stacks = "";
+      var n = Math.min(snap.cardCount, 4);
+      if (snap.cardCount > 0 && state && state.phase !== "lobby") {
+        stacks = '<div class="back-stack">';
+        var i;
+        for (i = 0; i < n; i++) stacks += '<div class="mini-back" style="left:' + (i * 3) + 'px;top:' + (i * -2) + 'px"></div>';
+        stacks += "</div>";
+      }
+      html = '<div class="seat-card">' +
+        '<div class="seat-face">' +
+          cowAvatar(seatIdx, (snap.isBot ? " bot" : "") + (snap.speaking ? " speaking" : ""), countBadge) +
+          stacks +
+        "</div>" +
+        '<div class="seat-meta"><div class="nm">' + escapeHtml(s.name) +
+          (snap.partner ? '<span class="partner-tag">' + T("seat.partner") + "</span>" : "") + "</div>" +
+          '<div class="sub">' + seatSubText(snap) + "</div></div>" +
+      "</div>";
+    }
+    var old = el.querySelector(".seat-card");
+    var wrap = document.createElement("div");
+    wrap.innerHTML = html;
+    var neu = wrap.firstChild;
+    if (old) el.replaceChild(neu, old);
+    else el.insertBefore(neu, el.firstChild);
+    el.setAttribute("data-seat", String(seatIdx));
+    el.setAttribute("data-cow", String(snap.cow));
+    el.setAttribute("data-occ", snap.occupied ? "1" : "0");
+  }
+
   function renderSeat(rel, seatIdx, s) {
     var el = seatEl(rel);
     if (!el) return;
-    if (!s || !s.occupied) {
-      el.innerHTML = '<div class="seat-card">' + cowAvatar(seatIdx, " empty") +
-        '<div class="seat-meta"><div class="nm">' + T("seat.empty") + '</div><div class="sub">' + T("seat.claim") + "</div></div></div>";
-      el.classList.remove("turn");
+    var snap = seatSnap(rel, seatIdx, s);
+    var prev = el._seatSnap;
+    if (snapEq(prev, snap)) {
       bindSeatClick(el, rel, seatIdx);
+      updateTimerRing(el, seatIdx);
       return;
     }
-    var partner = state && ((seatIdx % 2) === (state.selfSeat % 2)) && seatIdx !== state.selfSeat;
-    var stacks = "";
-    var n = Math.min(s.cardCount, 4);
-    if (rel !== "south" && s.cardCount > 0 && state.phase !== "lobby") {
-      stacks = '<div class="back-stack">';
-      for (var i = 0; i < n; i++) stacks += '<div class="mini-back" style="left:' + (i * 3) + 'px;top:' + (i * -2) + 'px"></div>';
-      stacks += "</div>";
-    }
-    if (rel === "south") {
-      el.innerHTML =
-        '<div class="seat-card">' + cowAvatar(seatIdx, s.speaking ? " speaking" : "") +
-        '<div class="you-chip"><span class="dot"></span>' +
-        escapeHtml(s.name || T("seat.you")) +
-        (s.auto ? " · " + T("seat.auto") : "") +
-        "</div></div>";
-    } else {
-      var countBadge = state.phase !== "lobby"
-        ? '<span class="cnt">' + s.cardCount + "</span>"
-        : "";
-      el.innerHTML =
-        '<div class="seat-card">' +
-          '<div class="seat-face">' +
-            cowAvatar(seatIdx, (s.isBot ? " bot" : "") + (s.speaking ? " speaking" : ""), countBadge) +
-            stacks +
-          "</div>" +
-          '<div class="seat-meta"><div class="nm">' + escapeHtml(s.name) +
-            (partner ? '<span class="partner-tag">' + T("seat.partner") + "</span>" : "") + "</div>" +
-            '<div class="sub">' + (s.isBot ? T("seat.bot") : (s.auto ? T("seat.auto") : (s.online ? T("seat.online") : T("seat.offline")))) +
-            (state.phase !== "lobby" ? "" : (s.ready ? " · " + T("seat.ready") : "")) +
-            (s.finishedRank ? " · " + placeLabel(s.finishedRank) : "") +
-            (canClaimNow() ? " · " + (s.isBot ? T("seat.claim") : T("seat.swap")) : "") +
-            "</div></div>" +
-        "</div>";
-    }
-    el.classList.toggle("turn", state.phase === "playing" && state.currentSeat === seatIdx);
+    var needRebuild = !prev || !el.querySelector(".avatar") ||
+      prev.occupied !== snap.occupied || prev.seatIdx !== snap.seatIdx || prev.cow !== snap.cow;
+    if (needRebuild) buildSeat(el, rel, seatIdx, s, snap);
+    else patchSeat(el, rel, seatIdx, s, snap);
+    el._seatSnap = snap;
+    el.classList.toggle("turn", !!snap.currentSeat);
     bindSeatClick(el, rel, seatIdx);
     updateTimerRing(el, seatIdx);
   }
