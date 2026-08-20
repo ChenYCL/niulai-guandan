@@ -59,6 +59,18 @@ npm run check
 
 runs a syntax check plus combo tests.
 
+## Deploy
+
+GitHub Pages will not work. This is a live Socket.IO table, not a static site.
+
+One-click Render from this repo:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ChenYCL/niulai-guandan)
+
+After deploy, open the Render URL, create a room, tap start (robots fill). Share the room code.
+
+Render free instances sleep when idle; first open may take ~30s.
+
 ## Stack
 
 Node, Express, Socket.IO, vanilla front-end. No build step. Theme art lives in `public/art/`; mapping is in `public/theme.js`.

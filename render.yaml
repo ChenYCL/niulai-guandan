@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: niulai-guandan
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
