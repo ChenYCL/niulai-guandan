@@ -260,9 +260,10 @@
     extraClass = extraClass || "";
     if (!c) return "";
     var red = c.suit === "H" || c.suit === "D" || c.joker === "b";
-    var art = (window.NiulaiTheme && NiulaiTheme.cardArt(c)) || { name: "", svg: "" };
     var suitKey = c.joker ? ("joker-" + c.joker) : ("suit-" + c.suit);
-    var cls = "card " + extraClass + (red ? " red" : "") + (c.joker ? " joker" : "") + " " + suitKey;
+    var faceExtra = (window.NiulaiTheme && NiulaiTheme.faceClass) ? NiulaiTheme.faceClass(c) : "";
+    var cls = "card " + extraClass + (red ? " red" : "") + (c.joker ? " joker" : "") + " " + suitKey +
+      (faceExtra ? " " + faceExtra : "");
     var mark = "";
     if (state && !c.joker) {
       if (GDCombo.isWild(c, state.level)) mark = '<span class="mark wild">配</span>';
@@ -278,10 +279,23 @@
     }
     return '<div class="' + cls + '" data-id="' + id + '"><div class="face">' +
       '<div class="rk">' + rk + (st ? '<div class="st">' + st + "</div>" : "") + "</div>" +
-      '<div class="pip">' + art.svg + "</div>" +
+      '<div class="pip"></div>' +
       '<div class="rk br">' + rk + (st ? '<div class="st">' + st + "</div>" : "") + "</div>" +
       mark +
       "</div></div>";
+  }
+
+  function cardNode(id, extraClass) {
+    var d = document.createElement("div");
+    d.innerHTML = cardHTML(id, extraClass);
+    return d.firstChild;
+  }
+
+  function idsEqual(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    var i;
+    for (i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
   }
 
   function backHTML(cls) {
@@ -837,11 +851,11 @@
 
   function applyHandSelection() {
     if (!handEl) return;
-    handEl.querySelectorAll(".hand-card").forEach(function (n) {
+    handEl.querySelectorAll(".hand-card").forEach(function (n, i) {
       var cid = handCardId(n);
       n.classList.toggle("selected", !!selected[cid]);
       n.classList.remove("hinted");
-      n.style.zIndex = selected[cid] ? "20" : "";
+      n.style.zIndex = selected[cid] ? "20" : String(i + 1);
     });
   }
 
@@ -868,38 +882,111 @@
     }
   }
   function renderHand(ids) {
-    handEl.innerHTML = "";
     var list = ids || [];
-    var mid = Math.ceil(list.length / 2) || 1;
-    var r1 = document.createElement("div");
-    r1.className = "hand-row";
-    var r2 = document.createElement("div");
-    r2.className = "hand-row";
-    list.forEach(function (id, i) {
-      (i < mid ? r1 : r2).appendChild(makeHandCard(id, i));
+    var existing = Object.create(null);
+    var cur = [];
+    handEl.querySelectorAll(".hand-card").forEach(function (n) {
+      var id = n.getAttribute("data-id");
+      if (!id) return;
+      existing[id] = n;
+      cur.push(id);
     });
-    handEl.appendChild(r1);
+    if (idsEqual(cur, list) && handEl.querySelector(".hand-row")) {
+      applyHandSelection();
+      return;
+    }
+    var mid = Math.ceil(list.length / 2) || 1;
+    var keep = Object.create(null);
+    list.forEach(function (id) { keep[id] = true; });
+    Object.keys(existing).forEach(function (id) {
+      if (!keep[id]) {
+        existing[id].remove();
+        delete existing[id];
+      }
+    });
+    var r1 = handEl.querySelector(".hand-row");
+    var rows = handEl.querySelectorAll(".hand-row");
+    var r2 = rows[1] || null;
+    if (!r1) {
+      r1 = document.createElement("div");
+      r1.className = "hand-row";
+      handEl.appendChild(r1);
+    }
+    if (list.length > mid && !r2) {
+      r2 = document.createElement("div");
+      r2.className = "hand-row";
+      handEl.appendChild(r2);
+    }
+    list.forEach(function (id, i) {
+      var node = existing[id];
+      if (!node) {
+        node = makeHandCard(id, i);
+        existing[id] = node;
+      } else {
+        node.classList.toggle("selected", !!selected[id]);
+        node.classList.remove("hinted");
+        node.style.zIndex = selected[id] ? "20" : String(i + 1);
+      }
+      (i < mid ? r1 : r2).appendChild(node);
+    });
+    if (list.length <= mid && r2) r2.remove();
+    rows = handEl.querySelectorAll(".hand-row");
+    var extraFrom = list.length > mid ? 2 : 1;
+    var ri;
+    for (ri = extraFrom; ri < rows.length; ri++) rows[ri].remove();
     fanRow(r1);
     if (list.length > mid) {
-      handEl.appendChild(r2);
-      fanRow(r2);
+      r2 = handEl.querySelectorAll(".hand-row")[1];
+      if (r2) fanRow(r2);
     }
   }
 
   function renderLastPlay(lp) {
-    lastPlayEl.innerHTML = "";
-    comboNameEl.textContent = "";
-    if (!lp || !lp.cards || !lp.cards.length) return;
-    var g = document.createElement("div");
-    g.className = "play-group";
-    lp.cards.forEach(function (id) {
-      var d = document.createElement("div");
-      d.innerHTML = cardHTML(id, "play-card");
-      g.appendChild(d.firstChild);
+    var cards = (lp && lp.cards) || [];
+    comboNameEl.textContent = cards.length ? comboLabel(lp.combo) : "";
+    if (!cards.length) {
+      lastPlayEl.innerHTML = "";
+      lastPlaySig = "";
+      return;
+    }
+    var g = lastPlayEl.querySelector(".play-group:not(.old)");
+    var cur = [];
+    if (g) {
+      Array.prototype.forEach.call(g.children, function (n) {
+        cur.push(n.getAttribute("data-id") || "");
+      });
+    }
+    if (g && idsEqual(cur, cards)) {
+      lastPlaySig = cards.join(",");
+      return;
+    }
+    if (!g) {
+      g = document.createElement("div");
+      g.className = "play-group";
+      lastPlayEl.appendChild(g);
+    }
+    var existing = Object.create(null);
+    Array.prototype.slice.call(g.children).forEach(function (n) {
+      var id = n.getAttribute("data-id");
+      if (id) existing[id] = n;
     });
-    lastPlayEl.appendChild(g);
-    comboNameEl.textContent = comboLabel(lp.combo);
-    lastPlaySig = (lp.cards || []).join(",");
+    var keep = Object.create(null);
+    cards.forEach(function (id) { keep[id] = true; });
+    Object.keys(existing).forEach(function (id) {
+      if (!keep[id]) {
+        existing[id].remove();
+        delete existing[id];
+      }
+    });
+    cards.forEach(function (id) {
+      var node = existing[id];
+      if (!node) {
+        node = cardNode(id, "play-card");
+        existing[id] = node;
+      }
+      g.appendChild(node);
+    });
+    lastPlaySig = cards.join(",");
   }
 
   function toggleSelect(id) {
@@ -1138,8 +1225,7 @@
     });
     if (!animLock) {
       renderHand(st.hand);
-      var sig = st.lastPlay && st.lastPlay.cards ? st.lastPlay.cards.join(",") : "";
-      if (sig !== lastPlaySig) renderLastPlay(st.lastPlay);
+      renderLastPlay(st.lastPlay);
     }
     renderActions();
     if (st.phase !== "dealing") {

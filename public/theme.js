@@ -2,27 +2,32 @@
 (function (root) {
   "use strict";
 
-  function pic(src) {
-    return '<img class="motif" src="' + src + '" alt="" draggable="false" />';
-  }
-
-  function svg(inner, vb) {
-    return '<svg class="motif" viewBox="' + (vb || "0 0 64 64") + '" xmlns="http://www.w3.org/2000/svg">' + inner + "</svg>";
-  }
-
-  /* 按正片：黄身粉鼻直立小牛 / 云雀 / 豹拉 / 狼 / 小绳头=草蛇 */
-  var MOTIF = {
-    H: { name: "", svg: pic("/art/niulai.png?v=nl31") },
-    D: { name: "", svg: pic("/art/diamonds.png?v=nl31") },
-    C: { name: "", svg: pic("/art/clubs.png?v=nl31") },
-    S: { name: "", svg: pic("/art/dad.png?v=nl31") },
-    s: { name: "", svg: pic("/art/joker-s.png?v=nl31") },
-    b: { name: "", svg: pic("/art/joker-b.png?v=nl31") },
-    mom: { name: "", svg: pic("/art/mom.png?v=nl31") },
-    niu2: { name: "", svg: pic("/art/niu2.png?v=nl31") }
+  var ART_V = "nl42";
+  var ART = {
+    H: "/art/niulai.png?v=" + ART_V,
+    D: "/art/diamonds.png?v=" + ART_V,
+    C: "/art/clubs.png?v=" + ART_V,
+    S: "/art/dad.png?v=" + ART_V,
+    s: "/art/joker-s.png?v=" + ART_V,
+    b: "/art/joker-b.png?v=" + ART_V,
+    mom: "/art/mom.png?v=" + ART_V,
+    niu2: "/art/niu2.png?v=" + ART_V
   };
 
-  ["/art/niulai.png?v=nl31","/art/diamonds.png?v=nl31","/art/clubs.png?v=nl31","/art/dad.png?v=nl31","/art/joker-s.png?v=nl31","/art/joker-b.png?v=nl31","/art/mom.png?v=nl31","/art/niu2.png?v=nl31"].forEach(function (src) {
+  /* 按正片：黄身粉鼻直立小牛 / 云雀 / 豹拉 / 狼 / 小绳头=草蛇
+     Faces are CSS background-image on .pip — never <img>, so remounts cannot flash. */
+  var MOTIF = {
+    H: { name: "", key: "H", src: ART.H },
+    D: { name: "", key: "D", src: ART.D },
+    C: { name: "", key: "C", src: ART.C },
+    S: { name: "", key: "S", src: ART.S },
+    s: { name: "", key: "s", src: ART.s },
+    b: { name: "", key: "b", src: ART.b },
+    mom: { name: "", key: "mom", src: ART.mom },
+    niu2: { name: "", key: "niu2", src: ART.niu2 }
+  };
+
+  [ART.H, ART.D, ART.C, ART.S, ART.s, ART.b, ART.mom, ART.niu2].forEach(function (src) {
     var im = new Image();
     im.src = src;
   });
@@ -32,6 +37,13 @@
     if (c.suit === "H" && c.rank === "K") return MOTIF.mom;
     if (c.suit === "H" && (c.rank === "Q" || c.rank === "J")) return MOTIF.niu2;
     return MOTIF[c.suit] || MOTIF.H;
+  }
+
+  function faceClass(c) {
+    if (!c || c.joker) return "";
+    if (c.suit === "H" && c.rank === "K") return "face-mom";
+    if (c.suit === "H" && (c.rank === "Q" || c.rank === "J")) return "face-niu2";
+    return "";
   }
 
   function drawPictorialWord(ctx, text, x, y, size, theme) {
@@ -133,7 +145,9 @@
 
   root.NiulaiTheme = {
     MOTIF: MOTIF,
+    ART: ART,
     cardArt: cardArt,
+    faceClass: faceClass,
     paintLogo: paintLogo,
     bindLogos: bindLogos
   };
