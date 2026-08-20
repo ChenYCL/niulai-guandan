@@ -63,13 +63,11 @@
           ctx.globalAlpha = 1;
         }
       }
-      ctx.fillStyle = "#1a0e08";
-      ctx.fillRect(0, H * 0.62, W, H * 0.38);
-      g = ctx.createLinearGradient(0, H * 0.62, 0, H);
-      g.addColorStop(0, "#24140c");
-      g.addColorStop(1, "#160c06");
+      g = ctx.createLinearGradient(0, H * 0.58, 0, H);
+      g.addColorStop(0, "rgba(36,20,12,0)");
+      g.addColorStop(1, "rgba(22,12,6,.35)");
       ctx.fillStyle = g;
-      ctx.fillRect(0, H * 0.64, W, H * 0.36);
+      ctx.fillRect(0, H * 0.58, W, H * 0.42);
       ctx.strokeStyle = "rgba(180,130,60,.28)";
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -383,18 +381,18 @@
     );
     shade.position.set(x, y - 0.02, z + 0.14);
     scene.add(shade);
-    var light = new THREE.PointLight(0xffc878, 22, 9, 2);
+    var light = new THREE.PointLight(0xffc878, 38, 11, 1.6);
     light.position.set(x, y - 0.04, z + 0.18);
     scene.add(light);
     return light;
   }
 
   function addLights() {
-    scene.add(new THREE.AmbientLight(0xffe2b8, 0.32));
-    var hemi = new THREE.HemisphereLight(0xffe6c0, 0x2a160c, 0.42);
+    scene.add(new THREE.AmbientLight(0xffe8c8, 0.62));
+    var hemi = new THREE.HemisphereLight(0xffecd0, 0x4a2a14, 0.78);
     scene.add(hemi);
 
-    var lamp = new THREE.SpotLight(0xffd89a, 38, 12, 0.72, 0.45, 1.4);
+    var lamp = new THREE.SpotLight(0xffd89a, 56, 14, 0.85, 0.38, 1.15);
     lamp.position.set(0, 3.2, 0.15);
     lamp.target.position.set(0, 0.76, -0.1);
     lamp.castShadow = true;
@@ -426,9 +424,15 @@
     sconceLightL = addSconce(-2.15, 2.05, -6.82);
     sconceLightR = addSconce(2.15, 2.05, -6.82);
 
-    var fill = new THREE.PointLight(0xffc090, 10, 10, 2);
-    fill.position.set(0, 1.6, 2.2);
+    var fill = new THREE.PointLight(0xffd0a8, 28, 12, 1.6);
+    fill.position.set(0, 1.85, 2.35);
     scene.add(fill);
+    var sideL = new THREE.PointLight(0xffc898, 18, 10, 1.7);
+    sideL.position.set(-3.2, 1.9, 0.4);
+    scene.add(sideL);
+    var sideR = new THREE.PointLight(0xffc898, 18, 10, 1.7);
+    sideR.position.set(3.2, 1.9, 0.4);
+    scene.add(sideR);
   }
 
   function init() {
@@ -450,16 +454,16 @@
       document.body.classList.add("no-webgl");
       return;
     }
-    renderer.setClearColor(0x1a1008, 1);
+    renderer.setClearColor(0x2c1a10, 1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.18;
+    renderer.toneMappingExposure = 1.46;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     scene = new THREE.Scene();
     scene.fog = null;
-    scene.background = new THREE.Color(0x1a1008);
+    scene.background = new THREE.Color(0x2c1a10);
 
     camera = new THREE.PerspectiveCamera(54, 1, 0.08, 40);
     camera.position.set(0, 1.22, 1.48);
@@ -485,9 +489,9 @@
   }
 
   function frame(t) {
-    if (sconceLightL) sconceLightL.intensity = 20 + Math.sin(t * 0.0017) * 1.6;
-    if (sconceLightR) sconceLightR.intensity = 20 + Math.sin(t * 0.0017 + 1.1) * 1.6;
-    if (lampLight) lampLight.intensity = 36 + Math.sin(t * 0.0009) * 1.2;
+    if (sconceLightL) sconceLightL.intensity = 36 + Math.sin(t * 0.0017) * 2.2;
+    if (sconceLightR) sconceLightR.intensity = 36 + Math.sin(t * 0.0017 + 1.1) * 2.2;
+    if (lampLight) lampLight.intensity = 54 + Math.sin(t * 0.0009) * 1.6;
     renderer.render(scene, camera);
   }
 

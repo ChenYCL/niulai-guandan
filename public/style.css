@@ -312,13 +312,13 @@ body.no-webgl #table {
   filter: none;
 }
 .seat[data-rel="west"] {
-  left: 2.4%; top: 40%;
+  left: 7.5%; top: 36%;
   transform: translateY(-50%) scale(.95);
   flex-direction: column;
   filter: none;
 }
 .seat[data-rel="east"] {
-  right: 2.4%; top: 40%;
+  right: 7.5%; top: 36%;
   transform: translateY(-50%) scale(.95);
   flex-direction: column;
   filter: none;
