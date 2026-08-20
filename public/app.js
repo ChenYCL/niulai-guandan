@@ -15,6 +15,11 @@
   var lastPlaySig = "";
 
   var $ = function (id) { return document.getElementById(id); };
+  function T(key, vars) { return (window.I18N && I18N.t) ? I18N.t(key, vars) : key; }
+  function comboLabel(c) { return (window.I18N && I18N.comboName) ? I18N.comboName(c) : ((c && c.name) || ""); }
+  function placeLabel(place, title) { return (window.I18N && I18N.placeName) ? I18N.placeName(place, title) : (title || ""); }
+  function kindLabel(kind) { return (window.I18N && I18N.kindName) ? I18N.kindName(kind) : (kind || ""); }
+  function errLabel(msg) { return (window.I18N && I18N.err) ? I18N.err(msg) : (msg || ""); }
   var lobby = $("lobby");
   var table = $("table");
   var handEl = $("hand");
@@ -25,7 +30,7 @@
 
   function nick() {
     var n = $("nick").value.trim() || localStorage.getItem("gd-nick") || "";
-    if (!n) n = "玩家" + Math.floor(Math.random() * 90 + 10);
+    if (!n) n = T("nick.default", { n: Math.floor(Math.random() * 90 + 10) });
     localStorage.setItem("gd-nick", n);
     $("nick").value = n;
     return n;
@@ -129,8 +134,8 @@
     }
     var rk, st;
     if (c.joker) {
-      rk = c.joker === "b" ? "大" : "小";
-      st = "王";
+      rk = c.joker === "b" ? T("card.big") : T("card.small");
+      st = T("card.joker");
     } else {
       rk = GDCombo.RANK_LABEL[c.rank] || c.rank;
       st = GDCombo.SUIT_GLYPH[c.suit] || "";
@@ -333,7 +338,7 @@
     layer.appendChild(w1);
     var word = document.createElement("div");
     word.className = "fx-word" + (kind === "joker4" ? " king" : "");
-    word.textContent = kind === "joker4" ? "天王炸" : kind === "joker3" ? "三王炸" : "炸弹";
+    word.textContent = kind === "joker4" ? T("fx.joker4") : kind === "joker3" ? T("fx.joker3") : T("fx.bomb");
     layer.appendChild(word);
     Sfx.bomb();
     setTimeout(function () { w1.remove(); word.remove(); }, 1000);
@@ -344,7 +349,7 @@
     var origin = seatTarget(rel);
     var b = document.createElement("div");
     b.className = "finish-banner";
-    b.textContent = fx.name || "头游";
+    b.textContent = placeLabel(fx.place, fx.name) || T("place.1");
     b.style.left = origin.left + "px";
     b.style.top = origin.top + "px";
     $("fx-layer").appendChild(b);
@@ -358,7 +363,7 @@
     if (!host) return;
     var p = document.createElement("div");
     p.className = "pass-bubble";
-    p.textContent = "不出";
+    p.textContent = T("fx.pass");
     host.appendChild(p);
     Sfx.pass();
     setTimeout(function () { p.remove(); }, 1300);
@@ -368,7 +373,7 @@
     var el = seatEl(rel);
     if (!el) return;
     if (!s || !s.occupied) {
-      el.innerHTML = '<div class="seat-card"><div class="avatar">空</div><div class="seat-meta"><div class="nm">空位</div></div></div>';
+      el.innerHTML = '<div class="seat-card"><div class="avatar">' + T("seat.empty_av") + '</div><div class="seat-meta"><div class="nm">' + T("seat.empty") + "</div></div></div>";
       el.classList.remove("turn");
       return;
     }
@@ -388,10 +393,10 @@
           stacks +
         "</div>" +
         '<div class="seat-meta"><div class="nm">' + escapeHtml(s.name) +
-          (partner ? '<span class="partner-tag">队友</span>' : "") + "</div>" +
-          '<div class="sub">' + (s.isBot ? "机器人" : (s.auto ? "托管" : (s.online ? "在线" : "离线"))) +
-          (state.phase !== "lobby" ? " · " + s.cardCount + "张" : (s.ready ? " · 已准备" : "")) +
-          (s.finishedRank ? " · " + ["", "头游", "二游", "三游", "末游"][s.finishedRank] : "") +
+          (partner ? '<span class="partner-tag">' + T("seat.partner") + "</span>" : "") + "</div>" +
+          '<div class="sub">' + (s.isBot ? T("seat.bot") : (s.auto ? T("seat.auto") : (s.online ? T("seat.online") : T("seat.offline")))) +
+          (state.phase !== "lobby" ? " · " + T("seat.cards", { n: s.cardCount }) : (s.ready ? " · " + T("seat.ready") : "")) +
+          (s.finishedRank ? " · " + placeLabel(s.finishedRank) : "") +
           "</div></div>" +
       "</div>";
     el.classList.toggle("turn", state.phase === "playing" && state.currentSeat === seatIdx);
@@ -466,7 +471,7 @@
       g.appendChild(d.firstChild);
     });
     lastPlayEl.appendChild(g);
-    comboNameEl.textContent = (lp.combo && lp.combo.name) || "";
+    comboNameEl.textContent = comboLabel(lp.combo);
     lastPlaySig = (lp.cards || []).join(",");
   }
 
@@ -515,7 +520,7 @@
     $("btn-hint").disabled = animLock || !myTurn;
     $("btn-start").disabled = animLock;
     if (state && state.seats[state.selfSeat]) {
-      $("btn-ready").textContent = state.seats[state.selfSeat].ready ? "取消准备" : "准备";
+      $("btn-ready").textContent = state.seats[state.selfSeat].ready ? T("act.unready") : T("act.ready");
     }
   }
 
@@ -525,7 +530,7 @@
     if (state.phase !== "playing") { el.classList.add("hidden"); return; }
     var mine = state.currentSeat === state.selfSeat;
     el.classList.remove("hidden");
-    el.textContent = mine ? "轮到你出牌" : ("等待 " + (state.turnName || "对手") + " 出牌");
+    el.textContent = mine ? T("turn.yours") : T("turn.wait", { name: state.turnName || T("turn.opponent") });
     el.classList.toggle("mine", !!mine);
   }
 
@@ -533,10 +538,10 @@
     if (!state) return;
     $("hud-code").textContent = state.code;
     $("hud-level").textContent = state.level;
-    $("hud-wild").textContent = "逢人配 红心" + state.level;
+    $("hud-wild").textContent = T("hud.wild", { n: state.level });
     var t0 = state.teamLevels[0], t1 = state.teamLevels[1];
     var myTeam = state.selfSeat % 2;
-    $("team-lv").textContent = "我方 " + (myTeam === 0 ? t0 : t1) + " 级  ·  对方 " + (myTeam === 0 ? t1 : t0) + " 级";
+    $("team-lv").textContent = T("hud.team", { us: myTeam === 0 ? t0 : t1, them: myTeam === 0 ? t1 : t0 });
   }
 
   function render(st) {
@@ -567,13 +572,13 @@
     if (!s) return;
     var box = $("settle");
     var rows = (s.places || []).map(function (p) {
-      return '<div class="row"><span>' + p.title + "</span><b>" + escapeHtml(p.name) + "</b></div>";
+      return '<div class="row"><span>' + placeLabel(p.place, p.title) + "</span><b>" + escapeHtml(p.name) + "</b></div>";
     }).join("");
     var extra = s.matchOver
-      ? '<div class="up">打到 A 再胜 · 本队夺冠</div>'
-      : '<div class="up">' + s.kind + " · 升 " + s.up + " 级 → 下一级 " + s.nextLevel + "</div>";
-    box.innerHTML = '<div class="panel"><h2>本局结算</h2>' + rows + extra +
-      '<button class="btn gold" id="btn-continue">继续</button></div>';
+      ? '<div class="up">' + T("settle.champion") + "</div>"
+      : '<div class="up">' + T("settle.up", { kind: kindLabel(s.kind), up: s.up, next: s.nextLevel }) + "</div>";
+    box.innerHTML = '<div class="panel"><h2>' + T("settle.title") + "</h2>" + rows + extra +
+      '<button class="btn gold" id="btn-continue">' + T("act.continue") + "</button></div>";
     box.classList.remove("hidden");
     $("btn-continue").onclick = function () { socket.emit("continue"); hideSettle(); };
     if (s.matchOver) Sfx.win();
@@ -611,7 +616,7 @@
     if (!b) return;
     var on = isFullscreen() || document.body.classList.contains("forced-fs");
     b.textContent = on ? "✕" : "⛶";
-    b.title = on ? "退出全屏" : "进入全屏";
+    b.title = on ? T("hud.fs_exit") : T("hud.fs_enter");
   }
   function checkOrient() {
     var gate = $("orient-gate");
@@ -642,7 +647,7 @@
   $("btn-join").onclick = function () {
     ensureAudio();
     var code = $("room-code").value.trim().toUpperCase();
-    if (!code) { toast("输入房间码"); return; }
+    if (!code) { toast(T("toast.need_code")); return; }
     enterFullscreen();
     socket.emit("join", { name: nick(), room: code });
   };
@@ -650,25 +655,25 @@
     if (!state) return;
     var url = location.origin + "?room=" + state.code;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(function () { toast("邀请链接已复制"); });
+      navigator.clipboard.writeText(url).then(function () { toast(T("toast.copied")); });
     } else {
       toast(url);
     }
   };
   function ensureInRoom() {
-    if (!socket.connected) { toast("掉线了，正在重连"); socket.connect(); return false; }
-    if (!state || !state.code) { toast("还没进房间"); return false; }
+    if (!socket.connected) { toast(T("toast.offline_reconnecting")); socket.connect(); return false; }
+    if (!state || !state.code) { toast(T("toast.not_in_room")); return false; }
     return true;
   }
   $("btn-ready").onclick = function () {
     if (!ensureInRoom()) return;
-    toast("已准备");
+    toast(T("toast.ready"));
     socket.emit("ready");
   };
   $("btn-start").onclick = function () {
     ensureAudio();
     if (!ensureInRoom()) return;
-    toast("正在开局，空位补机器人");
+    toast(T("toast.starting"));
     socket.emit("start");
   };
   $("btn-pass").onclick = function () { socket.emit("pass"); };
@@ -686,17 +691,17 @@
       var cid = n.querySelector(".card") && n.querySelector(".card").getAttribute("data-id");
       if (selected[cid]) n.classList.add("hinted");
     });
-    if (!pick || !pick.cards || !pick.cards.length) toast("管不上，只能不出");
+    if (!pick || !pick.cards || !pick.cards.length) toast(T("toast.only_pass"));
   };
   $("btn-play").onclick = function () {
     var ids = selectedIds();
-    if (!ids.length) { toast("请先选牌"); return; }
+    if (!ids.length) { toast(T("toast.pick_cards")); return; }
     var combo = GDCombo.classify(ids, state.level);
     if (!combo) {
       $("btn-play").classList.remove("shake");
       void $("btn-play").offsetWidth;
       $("btn-play").classList.add("shake");
-      toast("牌型不合法");
+      toast(T("toast.illegal"));
       return;
     }
     var prev = state.lastPlay && state.lastPlay.seat !== state.selfSeat ? state.lastPlay.combo : null;
@@ -704,7 +709,7 @@
       $("btn-play").classList.remove("shake");
       void $("btn-play").offsetWidth;
       $("btn-play").classList.add("shake");
-      toast("管不上");
+      toast(T("toast.cannot_beat"));
       return;
     }
     socket.emit("play", { cards: ids });
@@ -712,7 +717,7 @@
   };
   $("btn-return").onclick = function () {
     var ids = selectedIds();
-    if (ids.length !== 1) { toast("选一张还贡"); return; }
+    if (ids.length !== 1) { toast(T("toast.pick_return")); return; }
     socket.emit("tribute-return", { card: ids[0] });
     selected = {};
   };
@@ -737,7 +742,7 @@
           localStream.getTracks().forEach(function (t) { pcs[k].addTrack(t, localStream); });
         });
       } catch (e) {
-        toast("麦克风不可用，游戏照常");
+        toast(T("toast.mic_fail"));
       }
     } else {
       micOn = false;
@@ -754,7 +759,7 @@
     }
   }
   socket.on("connect", function () { rejoinIfNeeded(); });
-  socket.on("disconnect", function () { toast("连接断开，正在重连"); });
+  socket.on("disconnect", function () { toast(T("toast.reconnecting")); });
 
   /* ===== socket ===== */
   socket.on("joined", function (d) {
@@ -812,9 +817,9 @@
       /* render will show panel */
     }
     if (fx.type === "tribute-give") {
-      toast((state && state.seats[fx.from] ? state.seats[fx.from].name : "末游") + " 进贡");
+      toast(T("toast.tribute_give", { name: (state && state.seats[fx.from] ? state.seats[fx.from].name : T("place.4")) }));
     }
-    if (fx.type === "tribute-back") toast("还贡完成");
+    if (fx.type === "tribute-back") toast(T("toast.tribute_back"));
   });
 
   socket.on("hint", function (d) {
@@ -829,9 +834,10 @@
   });
 
   socket.on("error-msg", function (e) {
-    var msg = (e && e.message) || "操作无效";
+    var raw = (e && e.message) || "";
+    var msg = errLabel(raw || "操作无效");
     toast(msg);
-    if (msg === "管不上" || msg === "牌型不合法") {
+    if (raw === "管不上" || raw === "牌型不合法") {
       $("btn-play").classList.remove("shake");
       void $("btn-play").offsetWidth;
       $("btn-play").classList.add("shake");
@@ -930,4 +936,24 @@
   loop();
 
   window.addEventListener("pointerdown", function () { ensureAudio(); }, { once: true });
+
+  window.__gdRefreshLang = function () {
+    if (window.I18N) I18N.apply();
+    syncFsBtn();
+    if (!state) return;
+    renderHUD();
+    updateTurnBanner();
+    renderActions();
+    ["south", "east", "north", "west"].forEach(function (rel) {
+      var idx = relSeatIndex(rel);
+      renderSeat(rel, idx, state.seats[idx]);
+    });
+    if (!animLock) {
+      renderHand(state.hand);
+      if (state.lastPlay) renderLastPlay(state.lastPlay);
+    } else if (state.lastPlay) {
+      comboNameEl.textContent = comboLabel(state.lastPlay.combo);
+    }
+    if (state.phase === "settle" || state.phase === "matchover") showSettle(state.settle);
+  };
 })();

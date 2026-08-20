@@ -6,6 +6,24 @@ This is a fan-made table. Card faces are retouched stills of the yellow calf fro
 
 ![Final card faces](docs/card-faces.png)
 
+## 中文介绍
+
+《牛来》主题的四人两队掼蛋网页桌：房间码开桌，人不够机器人补位，一个人也能先打起来。牌面是 [niulai.co](https://niulai.co/) 上的黄牛截图，裁过、去过底，不是 AI 生成的脸；大小王分别镀金和冷银，一眼能分开。进贡已经做了，没有抗贡。
+
+- 建房、分享四位房间码，掉线回到原座
+- 点开始即可，空位自动坐机器人
+- 牌面、发牌轨迹、炸弹特效都按这桌的手感调过
+- 界面可切 中 / 日 / EN
+
+## 日本語
+
+『牛来』モチーフの4人2チーム、カンダンのウェブ卓。部屋コードで開いて、人が足りなければロボットが座る。ひとりでもすぐ打てる。札の顔は [niulai.co](https://niulai.co/) の黄牛スチルを切り抜いて整えたもので、AIで作った顔ではない。大王は金、小王は冷たい銀。進貢あり、抗貢なし。
+
+- 部屋をつくって4桁コードを渡す。切れても同じ席に戻れる
+- 開始を押せば空席はロボット
+- 配札の弧、爆弾演出、この卓用の手触り
+- 表示は 中 / 日 / EN で切り替え
+
 ## Card faces
 
 | Card | Face |
@@ -61,7 +79,9 @@ runs a syntax check plus combo tests.
 
 ## Deploy
 
-GitHub Pages will not work. This is a live Socket.IO table, not a static site.
+GitHub Pages will not work. This is a live Socket.IO table, not a static site. The table UI has a 中 / 日 / EN language switcher.
+
+GitHub Actions runs Node 20 CI on push/PR, then a Node deploy job can curl a Render deploy hook (`RENDER_DEPLOY_HOOK` repo secret). Until that secret is set, the deploy job skips and stays green.
 
 One-click Render from this repo:
 

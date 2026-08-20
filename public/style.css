@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap");
 
 :root {
   --felt: #0d3b2e;
@@ -18,7 +18,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; }
 body {
-  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "Noto Sans SC", "Noto Sans JP", "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
   color: var(--ink);
   background: #06140f;
   user-select: none;
@@ -38,11 +38,13 @@ body {
   content: "掼蛋";
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  font-family: "Noto Serif SC", serif;
+  font-family: "Noto Serif SC", "Noto Serif JP", serif;
   font-size: min(28vw, 220px);
   color: rgba(212, 175, 55, 0.06);
   letter-spacing: 0.2em;
 }
+html[data-lang="ja"] .lobby-bg::after { content: "カンダン"; letter-spacing: 0.08em; }
+html[data-lang="en"] .lobby-bg::after { content: "GUANDAN"; letter-spacing: 0.08em; font-size: min(18vw, 140px); }
 .lobby-card {
   position: relative; z-index: 2;
   width: min(420px, 92vw);
@@ -660,3 +662,49 @@ body.portrait :root, .portrait {
   --overlap: 22px;
 }
 .orient-gate { display: none !important; }
+
+/* ===== Language switcher ===== */
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid rgba(212, 175, 55, .38);
+}
+.lang-switch button {
+  border: 0;
+  background: transparent;
+  color: rgba(243, 239, 228, .72);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  line-height: 1;
+}
+.lang-switch button.active {
+  background: linear-gradient(180deg, #f3d56b, #c9a227);
+  color: #3a2208;
+  box-shadow: 0 2px 8px rgba(201, 162, 39, .35);
+}
+.lang-switch-lobby {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+.lang-switch-hud {
+  padding: 2px;
+  flex-shrink: 0;
+}
+.lang-switch-hud button {
+  min-width: 22px;
+  height: 22px;
+  font-size: 10px;
+  padding: 0 6px;
+}
