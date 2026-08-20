@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>牛来掼蛋</title>
+  <link rel="stylesheet" href="/style.css?v=nl18" />
+</head>
+<body>
+  <div id="orient-gate" class="orient-gate hidden">
+    <div class="orient-card">
+      <div class="phone-ico">📱</div>
+      <p>请把手机<b>横过来</b></p>
+      <p class="sub">本桌强制横屏全屏</p>
+      <button id="btn-enter-fs" class="btn gold lg">进入全屏</button>
+    </div>
+  </div>
+  <div id="lobby" class="screen">
+    <div class="lobby-bg"></div>
+    <div class="lobby-card">
+      <canvas id="lobby-logo" width="640" height="160"></canvas>
+      <p class="tagline">四人两队 · 升级争先</p>
+      <label class="field">
+        <span>昵称</span>
+        <input id="nick" maxlength="10" placeholder="怎么称呼你" autocomplete="nickname" />
+      </label>
+      <button id="btn-create" class="btn gold lg">创建房间</button>
+      <div class="join-row">
+        <input id="room-code" maxlength="4" placeholder="房间码" class="code-in" autocomplete="off" />
+        <button id="btn-join" class="btn ghost lg">加入</button>
+      </div>
+      <p class="hint-line">人不够自动补机器人，一个人也能开打。进贡已做，无抗贡。</p>
+    </div>
+  </div>
+
+  <div id="table" class="screen hidden">
+    <header class="hud">
+      <div class="hud-left">
+        <div class="room-chip">
+          <span>房间</span>
+          <b id="hud-code">----</b>
+          <button id="btn-copy" class="mini">复制邀请</button>
+        </div>
+      </div>
+      <div class="hud-mid">
+        <div class="level-badge">
+          <span>当前级牌</span>
+          <b id="hud-level">2</b>
+          <em id="hud-wild">逢人配 红心2</em>
+        </div>
+        <div class="team-lv" id="team-lv"></div>
+      </div>
+      <div class="hud-right">
+        <button id="btn-sfx" class="icon-btn" title="音效">🔊</button>
+        <button id="btn-mic" class="icon-btn" title="麦克风">🎤</button>
+        <button id="btn-fs" class="icon-btn" title="全屏">⛶</button>
+      </div>
+    </header>
+
+    <div class="table-frame">
+      <div class="wood-rim">
+        <div class="felt" id="felt">
+          <canvas id="felt-logo" class="felt-logo" width="720" height="220"></canvas>
+          <div class="center-stack" id="center-stack">
+            <div class="last-play" id="last-play"></div>
+            <div class="combo-name" id="combo-name"></div>
+            <div class="turn-banner hidden" id="turn-banner"></div>
+          </div>
+          <div class="deck-pile" id="deck-pile"></div>
+          <div class="seat" data-rel="north" id="seat-north"></div>
+          <div class="seat" data-rel="west" id="seat-west"></div>
+          <div class="seat" data-rel="east" id="seat-east"></div>
+          <div class="seat self" data-rel="south" id="seat-south"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dock">
+      <div class="hand-wrap" id="hand-wrap">
+        <div class="hand" id="hand"></div>
+      </div>
+      <div class="actions" id="actions">
+        <button id="btn-pass" class="btn dark">不出</button>
+        <button id="btn-hint" class="btn ghost">提示</button>
+        <button id="btn-play" class="btn gold">出牌</button>
+        <button id="btn-ready" class="btn gold hidden">准备</button>
+        <button id="btn-start" class="btn gold hidden">开始</button>
+        <button id="btn-return" class="btn gold hidden">还贡</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="fly-layer"></div>
+  <div id="fx-layer"></div>
+  <div id="toast"></div>
+  <div id="settle" class="hidden"></div>
+  <audio id="remote-audio" autoplay playsinline></audio>
+  <div id="remote-box"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/combo.js?v=nl18"></script>
+  <script src="/theme.js?v=nl18"></script>
+  <script src="/app.js?v=nl18"></script>
+</body>
+</html>
