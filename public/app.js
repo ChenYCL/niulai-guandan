@@ -954,7 +954,7 @@
     state = st;
     lobby.classList.add("hidden");
     table.classList.remove("hidden");
-    if (window.NiulaiRoom3D && NiulaiRoom3D.sync) NiulaiRoom3D.sync();
+    if (window.NiulaiRoom2D && NiulaiRoom2D.sync) NiulaiRoom2D.sync();
     renderHUD();
     ["south", "east", "north", "west"].forEach(function (rel) {
       var idx = relSeatIndex(rel);

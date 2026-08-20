@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>牛来掼蛋</title>
-  <link rel="stylesheet" href="/style.css?v=nl33" />
+  <link rel="stylesheet" href="/style.css?v=nl40" />
 </head>
 <body>
   <div id="orient-gate" class="orient-gate hidden">
@@ -95,7 +95,6 @@
         <div class="seat" data-rel="west" id="seat-west"></div>
         <div class="seat" data-rel="east" id="seat-east"></div>
         <div class="seat self" data-rel="south" id="seat-south"></div>
-        <div class="turn-banner hidden" id="turn-banner"></div>
       </div>
     </div>
 
@@ -103,6 +102,7 @@
       <div class="hand-wrap" id="hand-wrap">
         <div class="hand" id="hand"></div>
       </div>
+      <div class="turn-banner hidden" id="turn-banner"></div>
       <div class="actions" id="actions">
         <button id="btn-pass" class="btn dark" data-i18n="act.pass">不出</button>
         <button id="btn-hint" class="btn ghost" data-i18n="act.hint">提示</button>
@@ -134,11 +134,11 @@
   <div id="remote-box"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="https://unpkg.com/three@0.160.1/build/three.min.js"></script>
+  <script src="https://unpkg.com/pixi.js@7.4.2/dist/pixi.min.js"></script>
   <script src="/combo.js?v=nl31"></script>
-  <script src="/theme.js?v=nl31"></script>
-  <script src="/room3d.js?v=nl33"></script>
+  <script src="/theme.js?v=nl40"></script>
+  <script src="/room2d.js?v=nl40"></script>
   <script src="/i18n.js?v=nl31"></script>
-  <script src="/app.js?v=nl31"></script>
+  <script src="/app.js?v=nl40"></script>
 </body>
 </html>

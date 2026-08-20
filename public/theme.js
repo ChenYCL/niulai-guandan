@@ -41,11 +41,11 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.lineJoin = "round";
-    ctx.lineWidth = Math.max(2, size / 14);
+    ctx.lineWidth = Math.max(3, size / 10);
     ctx.strokeStyle = theme.stroke;
     ctx.fillStyle = theme.fill;
     ctx.shadowColor = theme.shadow;
-    ctx.shadowBlur = size / 6;
+    ctx.shadowBlur = size / 18;
     ctx.strokeText(text, 0, 0);
     ctx.fillText(text, 0, 0);
     ctx.shadowBlur = 0;
@@ -87,10 +87,10 @@
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
     var words = [
-      { t: "牛", k: "cow", fill: "#f0c27a", stroke: "#6b2e0c", shadow: "rgba(90,40,0,.45)" },
-      { t: "来", k: "bird", fill: "#ffe08a", stroke: "#8a5a10", shadow: "rgba(80,50,0,.35)" },
-      { t: "掼", k: "spot", fill: "#e6b85c", stroke: "#5a3510", shadow: "rgba(60,30,0,.4)" },
-      { t: "蛋", k: "coil", fill: "#d4af37", stroke: "#3d5a20", shadow: "rgba(20,40,10,.35)" }
+      { t: "牛", k: "cow", fill: "#f6cc6e", stroke: "#5a1e08", shadow: "rgba(60,20,0,.35)" },
+      { t: "来", k: "bird", fill: "#ffe38a", stroke: "#6a3208", shadow: "rgba(70,30,0,.3)" },
+      { t: "掼", k: "spot", fill: "#efc04a", stroke: "#4a2208", shadow: "rgba(50,20,0,.32)" },
+      { t: "蛋", k: "coil", fill: "#d8a828", stroke: "#3a4010", shadow: "rgba(20,30,8,.3)" }
     ];
     var size = Math.min(w / 4.6, h * 0.72);
     var gap = size * 1.12;
