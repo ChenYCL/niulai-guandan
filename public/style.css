@@ -900,7 +900,6 @@ body.shake-screen { animation: screen-shake .45s linear; }
   object-fit: contain;
   object-position: center center;
   background: transparent;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.25));
 }
 .card .pip .who { font-size: 9px; letter-spacing:.12em; font-style:normal; margin-top:1px; opacity:.8; font-weight:700; }
 .card.suit-H .face { background: linear-gradient(180deg,#fff6ef,#f3c9a8); color:#8a2a10; }
