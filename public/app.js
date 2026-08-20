@@ -145,7 +145,7 @@
       if (!ctx || this.running) return;
       this.running = true;
       var master = ctx.createGain();
-      master.gain.value = 0.16;
+      master.gain.value = 0.48;
       master.connect(ctx.destination);
       function pad(freq, type, detune, vol) {
         var o = ctx.createOscillator();
@@ -168,9 +168,9 @@
         o.start(); lfo.start();
         Bgm.nodes.push(o, lfo);
       }
-      pad(146.8, "sine", -4, 0.14);
-      pad(220, "sine", 5, 0.10);
-      pad(293.7, "triangle", 3, 0.07);
+      pad(146.8, "sine", -4, 0.22);
+      pad(220, "sine", 5, 0.16);
+      pad(293.7, "triangle", 3, 0.12);
       this.nodes.push(master);
       this._master = master;
       this._seq = 0;
@@ -192,8 +192,8 @@
         if (!Bgm.running || !Bgm._master) return;
         var i = Bgm._seq;
         var f = grid[i % grid.length];
-        if (f) Bgm.pluck(ctx, Bgm._master, f, 0.18, 0.08);
-        if (i % 4 === 0) Bgm.pluck(ctx, Bgm._master, bass[(i / 4 | 0) % bass.length], 0.28, 0.05);
+        if (f) Bgm.pluck(ctx, Bgm._master, f, 0.22, 0.18);
+        if (i % 4 === 0) Bgm.pluck(ctx, Bgm._master, bass[(i / 4 | 0) % bass.length], 0.28, 0.12);
         if (i % 8 === 0) {
           try {
             var n = ctx.createBuffer(1, ctx.sampleRate * 0.035, ctx.sampleRate);
@@ -206,7 +206,7 @@
             bp.type = "highpass";
             bp.frequency.value = 2200;
             var gg = ctx.createGain();
-            gg.gain.value = 0.045;
+            gg.gain.value = 0.09;
             src.connect(bp); bp.connect(gg); gg.connect(Bgm._master);
             src.start();
           } catch (e2) {}
