@@ -132,7 +132,7 @@
         o.type = "triangle";
         o.frequency.value = freq;
         f.type = "lowpass";
-        f.frequency.value = 720;
+        f.frequency.value = 1400;
         f.Q.value = 0.6;
         g.gain.setValueAtTime(vol || 0.03, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
@@ -145,7 +145,7 @@
       if (!ctx || this.running) return;
       this.running = true;
       var master = ctx.createGain();
-      master.gain.value = 0.05;
+      master.gain.value = 0.055;
       master.connect(ctx.destination);
       function pad(freq, type, detune, vol) {
         var o = ctx.createOscillator();
@@ -168,25 +168,43 @@
         o.start(); lfo.start();
         Bgm.nodes.push(o, lfo);
       }
-      pad(196, "sine", -6, 0.26);
-      pad(233.08, "sine", 4, 0.16);
-      pad(294, "triangle", 2, 0.1);
-      pad(98, "sine", 0, 0.14);
+      pad(196, "sine", -4, 0.14);
+      pad(247, "sine", 5, 0.1);
+      pad(392, "triangle", 3, 0.08);
       this.nodes.push(master);
       this._master = master;
       this._seq = 0;
       var phrase = [
-        196, 294, 233, 294, 196, 294,
-        196, 349, 294, 262, 233, 294,
-        233, 294, 196, 294, 233, 349,
-        196, 262, 294, 233, 196, 294
+        392, 440, 494, 392, 494, 440, 392, 330,
+        294, 330, 392, 440, 392, 330, 294, 247,
+        392, 494, 587, 494, 440, 392, 330, 392,
+        440, 392, 330, 294, 330, 392, 294, 247
       ];
-      var eighthMs = Math.round((60 / 76 / 3) * 1000);
+      var bass = [196, 196, 247, 196, 165, 196, 247, 196];
+      var eighthMs = Math.round((60 / 112) * 500);
       this._tick = setInterval(function () {
         if (!Bgm.running || !Bgm._master) return;
-        var f = phrase[Bgm._seq % phrase.length];
-        Bgm.pluck(ctx, Bgm._master, f, 0.34, 0.034);
-        if (Bgm._seq % 6 === 0) Bgm.pluck(ctx, Bgm._master, 98, 0.5, 0.018);
+        var i = Bgm._seq;
+        var f = phrase[i % phrase.length];
+        Bgm.pluck(ctx, Bgm._master, f, 0.22, 0.045);
+        if (i % 2 === 0) Bgm.pluck(ctx, Bgm._master, bass[(i / 2 | 0) % bass.length], 0.28, 0.03);
+        if (i % 4 === 0) {
+          try {
+            var n = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+            var d = n.getChannelData(0);
+            var k;
+            for (k = 0; k < d.length; k++) d[k] = (Math.random() * 2 - 1) * (1 - k / d.length);
+            var src = ctx.createBufferSource();
+            src.buffer = n;
+            var bp = ctx.createBiquadFilter();
+            bp.type = "highpass";
+            bp.frequency.value = 1800;
+            var gg = ctx.createGain();
+            gg.gain.value = 0.03;
+            src.connect(bp); bp.connect(gg); gg.connect(Bgm._master);
+            src.start();
+          } catch (e2) {}
+        }
         Bgm._seq++;
       }, eighthMs);
     },

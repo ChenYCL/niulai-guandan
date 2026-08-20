@@ -171,7 +171,7 @@ html[data-lang="en"] .lobby-bg::after { content: "GUANDAN"; letter-spacing: 0.08
 .icon-btn.on { box-shadow: 0 0 0 3px rgba(80,220,140,.45); }
 .icon-btn.muted { opacity: .5; }
 
-/* ===== Club room (Three.js canvas) + DOM play overlay ===== */
+/* ===== Outdoor meadow (Three.js canvas) + DOM play overlay ===== */
 #room-gl, .room-gl {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -181,8 +181,8 @@ html[data-lang="en"] .lobby-bg::after { content: "GUANDAN"; letter-spacing: 0.08
 }
 body.no-webgl #table {
   background:
-    radial-gradient(ellipse at 50% 18%, rgba(255,210,120,.16), transparent 42%),
-    linear-gradient(180deg, #2a1810 0%, #1a1008 42%, #120c08 100%);
+    radial-gradient(ellipse at 78% 6%, rgba(255,214,130,.42), transparent 36%),
+    linear-gradient(180deg, #6eb8d4 0%, #87c4c0 28%, #6aad58 58%, #3d8a42 100%);
 }
 
 .table-frame {
